@@ -45,28 +45,21 @@
         font-size: 16px;
     }
 
-    .download-btn {
-        margin-bottom: 20px;
-        padding: 6px 14px;
-        font-size: 14px;
-        border-radius: 8px;
-        border: none;
-        cursor: pointer;
-        background: #1976d2;
-        color: #fff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    /* 🎯 GRID TOTALMENTE CENTRADO */
+    .grid-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-top: 15px;
     }
-    .download-btn:hover {
-        background: #0d47a1;
-    }
-
     .grid {
         display: grid;
         grid-template-columns: repeat(10, 1fr);
         gap: 10px;
-        max-width: 520px;
-        margin: 0 auto;
+        width: 480px;
+        max-width: 100%;
     }
+
     .num {
         background: white;
         border: 2px solid #333;
@@ -78,7 +71,6 @@
         user-select: none;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 
-        /* Centramos el contenido dentro del cuadrito */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -87,22 +79,24 @@
         background: #d4f0ff;
     }
 
-    .reservado {
-        background: #ffd54f !important; /* amarillo */
-        border-color: #ffb300 !important;
-    }
-    .verificacion {
-        background: #64b5f6 !important; /* azul */
-        border-color: #1976d2 !important;
-        color: #fff !important;
-    }
-    .pagado {
-        background: #4caf50 !important; /* verde */
-        color: white !important;
-        border-color: #2e7d32 !important;
-    }
+    .reservado { background: #ffd54f !important; border-color: #ffb300 !important; }
+    .verificacion { background: #64b5f6 !important; border-color: #1976d2 !important; color: #fff !important; }
+    .pagado { background: #4caf50 !important; color: white !important; border-color: #2e7d32 !important; }
 
-    /* Panel administrador */
+    .download-btn {
+        margin-bottom: 20px;
+        padding: 6px 14px;
+        font-size: 14px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        background: #1976d2;
+        color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .download-btn:hover { background: #0d47a1; }
+
+    /* Panel admin */
     .admin-panel {
         margin-top: 25px;
         padding: 15px;
@@ -116,16 +110,10 @@
         text-align: left;
         font-size: 14px;
     }
-    .admin-panel h3 {
-        margin-top: 0;
-        text-align: center;
-    }
-    .admin-row {
-        margin: 4px 0;
-    }
-    .admin-label {
-        font-weight: bold;
-    }
+    .admin-panel h3 { text-align: center; }
+    .admin-row { margin: 4px 0; }
+    .admin-label { font-weight: bold; }
+
     .admin-buttons {
         margin-top: 10px;
         display: flex;
@@ -133,29 +121,13 @@
         gap: 8px;
         justify-content: center;
     }
-    .admin-btn {
-        padding: 6px 12px;
-        border-radius: 6px;
-        border: none;
-        cursor: pointer;
-        font-size: 13px;
-    }
-    .btn-liberar {
-        background: #f44336;
-        color: #fff;
-    }
-    .btn-pagado {
-        background: #4caf50;
-        color: #fff;
-    }
-    .btn-nombre {
-        background: #ff9800;
-        color: #fff;
-    }
-    .btn-comprobante {
-        background: #2196f3;
-        color: #fff;
-    }
+
+    .admin-btn { padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; border: none; }
+    .btn-liberar { background: #f44336; color: #fff; }
+    .btn-pagado { background: #4caf50; color: #fff; }
+    .btn-nombre { background: #ff9800; color: #fff; }
+    .btn-comprobante { background: #2196f3; color: #fff; }
+
 </style>
 </head>
 <body>
@@ -166,24 +138,13 @@
     Se puede pagar por transferencia a Nequi: <strong>3116403643</strong>
 </div>
 
-<p style="margin-top:18px;">
-    Solo el administrador puede registrar y gestionar los números.<br>
-    Al seleccionar un número se pedirá la contraseña.
-</p>
+<p>Solo el administrador puede registrar y gestionar los números.</p>
 
 <div class="legend">
-    <span class="legend-item">
-        <span class="legend-color" style="background:white;"></span> Disponible
-    </span>
-    <span class="legend-item">
-        <span class="legend-color" style="background:#ffd54f;"></span> Reservado / No pagado
-    </span>
-    <span class="legend-item">
-        <span class="legend-color" style="background:#64b5f6;"></span> En verificación
-    </span>
-    <span class="legend-item">
-        <span class="legend-color" style="background:#4caf50;"></span> Pagado
-    </span>
+    <span class="legend-item"><span class="legend-color" style="background:white;"></span>Disponible</span>
+    <span class="legend-item"><span class="legend-color" style="background:#ffd54f;"></span>No pagado</span>
+    <span class="legend-item"><span class="legend-color" style="background:#64b5f6;"></span>En verificación</span>
+    <span class="legend-item"><span class="legend-color" style="background:#4caf50;"></span>Pagado</span>
 </div>
 
 <div class="resumen">
@@ -191,334 +152,205 @@
     Números libres: <strong id="freeCount">100</strong>
 </div>
 
-<button id="btnDescargar" class="download-btn">
-    Descargar consolidado (CSV)
-</button>
+<button id="btnDescargar" class="download-btn">Descargar consolidado (CSV)</button>
 
-<div class="grid" id="grid"></div>
+<div class="grid-container">
+    <div class="grid" id="grid"></div>
+</div>
 
 <!-- Panel de administración -->
 <div id="adminPanel" class="admin-panel" style="display:none;">
     <h3>Panel de administración</h3>
-    <div class="admin-row">
-        <span class="admin-label">Número:</span> <span id="panelNum"></span>
-    </div>
-    <div class="admin-row">
-        <span class="admin-label">Nombre:</span> <span id="panelNombre"></span>
-    </div>
-    <div class="admin-row">
-        <span class="admin-label">Estado:</span> <span id="panelEstado"></span>
-    </div>
-    <div class="admin-row">
-        <span class="admin-label">Comprobante:</span> <span id="panelComprobante"></span>
-    </div>
+    <div><span class="admin-label">Número:</span> <span id="panelNum"></span></div>
+    <div><span class="admin-label">Nombre:</span> <span id="panelNombre"></span></div>
+    <div><span class="admin-label">Estado:</span> <span id="panelEstado"></span></div>
+    <div><span class="admin-label">Comprobante:</span> <span id="panelComprobante"></span></div>
+
     <div class="admin-buttons">
-        <button class="admin-btn btn-liberar" id="btnLiberar">Liberar número</button>
-        <button class="admin-btn btn-pagado" id="btnPagado">Marcar / desmarcar pagado</button>
+        <button class="admin-btn btn-liberar" id="btnLiberar">Liberar</button>
+        <button class="admin-btn btn-pagado" id="btnPagado">Pagado</button>
         <button class="admin-btn btn-nombre" id="btnNombre">Cambiar nombre</button>
-        <button class="admin-btn btn-comprobante" id="btnComprobante">Gestionar comprobante</button>
+        <button class="admin-btn btn-comprobante" id="btnComprobante">Comprobante</button>
     </div>
 </div>
 
-<!-- SDK de Firebase (modo compat para que sea sencillo sin módulos) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <script>
-// 🔐 Contraseña de administrador
+
 const ADMIN_PASSWORD = "1030";
 
-// Configuración REAL de tu proyecto Firebase
-const firebaseConfig = {
+firebase.initializeApp({
   apiKey: "AIzaSyC7-pRwzbLgQGkJq1EnO9AcFHPIYKv-1WQ",
   authDomain: "rifa-virtual-af611.firebaseapp.com",
   databaseURL: "https://rifa-virtual-af611-default-rtdb.firebaseio.com",
   projectId: "rifa-virtual-af611",
   storageBucket: "rifa-virtual-af611.firebasestorage.app",
   messagingSenderId: "420485730500",
-  appId: "1:420485730500:web:c1adb12167d9a634e1f991",
-  measurementId: "G-YXTFSTNZNR"
-};
+  appId: "1:420485730500:web:c1adb12167d9a634e1f991"
+});
 
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const estadoActual = {};
 
 const grid = document.getElementById("grid");
-const estadoActual = {};          // aquí guardamos lo que viene de Firebase
-const numDivs = {};               // referencia a cada div por número
-
-// Referencias a contadores
 const selCountSpan = document.getElementById("selCount");
 const freeCountSpan = document.getElementById("freeCount");
 
-// Panel admin
-const adminPanel = document.getElementById("adminPanel");
-const panelNum = document.getElementById("panelNum");
-const panelNombre = document.getElementById("panelNombre");
-const panelEstado = document.getElementById("panelEstado");
-const panelComprobante = document.getElementById("panelComprobante");
-
-const btnLiberar = document.getElementById("btnLiberar");
-const btnPagado = document.getElementById("btnPagado");
-const btnNombre = document.getElementById("btnNombre");
-const btnComprobante = document.getElementById("btnComprobante");
-
-// Botón descargar consolidado
-const btnDescargar = document.getElementById("btnDescargar");
-
-// Número actualmente seleccionado en el panel
-let numeroSeleccionado = null;
-
-// Crear los 100 números 00–99
+// === Crear los 100 números ===
 for (let i = 0; i < 100; i++) {
-    let num = i.toString().padStart(2, "0");
-    let div = document.createElement("div");
-    div.textContent = num;
+    const num = i.toString().padStart(2, "0");
+    const div = document.createElement("div");
     div.classList.add("num");
-    numDivs[num] = div;
-
-    div.onclick = () => {
-        manejarClickNumero(num);
-    };
-
+    div.textContent = num;
+    div.onclick = () => manejarClick(num);
     grid.appendChild(div);
 }
 
-// Referencia a la colección "numeros" en Realtime Database
-const numerosRef = db.ref("numeros");
+// === Leer Firebase ===
+db.ref("numeros").on("value", snap => {
+    const data = snap.val() || {};
 
-// Escuchar cambios en tiempo real
-numerosRef.on("value", (snapshot) => {
-    const data = snapshot.val() || {};
+    Object.keys(data).forEach(k => estadoActual[k] = data[k]);
+    Object.keys(estadoActual).forEach(k => { if (!data[k]) delete estadoActual[k] });
 
-    // Limpiar mapa local
-    for (const k in estadoActual) {
-        delete estadoActual[k];
-    }
+    // Contadores
+    selCountSpan.textContent = Object.keys(data).length;
+    freeCountSpan.textContent = 100 - Object.keys(data).length;
 
-    // Actualizar contadores
-    const seleccionados = Object.keys(data).length;
-    const libres = 100 - seleccionados;
-    selCountSpan.textContent = seleccionados;
-    freeCountSpan.textContent = libres;
-
-    // Limpiar todos los cuadros a "disponibles"
-    for (let i = 0; i < 100; i++) {
-        let n = i.toString().padStart(2, "0");
-        let div = numDivs[n];
-        div.classList.remove("reservado", "verificacion", "pagado");
+    // Reset estilos
+    grid.querySelectorAll(".num").forEach(div => {
+        div.classList.remove("reservado","verificacion","pagado");
         div.title = "";
-    }
-
-    // Guardar y aplicar estados desde Firebase
-    Object.keys(data).forEach(num => {
-        estadoActual[num] = data[num];
-        const info = data[num];
-        const div = numDivs[num];
-        if (!div) return;
-
-        div.classList.remove("reservado", "verificacion", "pagado");
-
-        const enVerificacion = !!info.enVerificacion;
-        const pagado = !!info.paid;
-
-        if (pagado) {
-            div.classList.add("pagado");
-        } else if (enVerificacion) {
-            div.classList.add("verificacion");
-        } else {
-            div.classList.add("reservado");
-        }
-
-        const estadoTexto = pagado
-            ? "PAGADO"
-            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
-
-        let extra = "";
-        if (info.comprobante) {
-            extra = " | Comprobante: " + info.comprobante;
-        }
-
-        div.title = `#${num} - ${info.name} - ${estadoTexto}${extra}`;
     });
 
-    // Si hay un número seleccionado, refrescar el panel
-    if (numeroSeleccionado !== null) {
-        actualizarPanel(numeroSeleccionado);
+    // Colorear
+    for (let num in data) {
+        const info = data[num];
+        const div = [...grid.children].find(x => x.textContent === num);
+
+        if (info.paid) div.classList.add("pagado");
+        else if (info.enVerificacion) div.classList.add("verificacion");
+        else div.classList.add("reservado");
+
+        const estado = info.paid
+            ? "PAGADO"
+            : info.enVerificacion ? "EN VERIFICACION" : "NO PAGADO";
+
+        div.title = `${num} - ${info.name} - ${estado}`;
     }
 });
 
-// Función para pedir contraseña de administrador
-function solicitarPasswordAdmin() {
-    const intento = prompt("Ingrese la contraseña de administrador:");
-    if (intento === null) return false; // Cancelar
-    return intento === ADMIN_PASSWORD;
+// === Pedir contraseña ===
+function pedirPass() {
+    return prompt("Contraseña de administrador:") === ADMIN_PASSWORD;
 }
 
-// Manejar clic sobre un número
-function manejarClickNumero(num) {
-    // Siempre pedir contraseña para acceder
-    if (!solicitarPasswordAdmin()) {
-        alert("Contraseña incorrecta. No se realizaron cambios.");
+// === Registrar o abrir panel ===
+let numeroSeleccionado = null;
+
+function manejarClick(num) {
+
+    if (!pedirPass()) {
+        alert("Contraseña incorrecta");
         return;
     }
 
-    const refNum = db.ref("numeros/" + num);
-    const actual = estadoActual[num] || null;
-
-    // Si el número está libre: registrar nuevo nombre
-    if (!actual) {
-        let name = prompt(`Ingresa el nombre para el número ${num}:`);
-        if (!name) return;
-
-        const data = {
-            name: name,
-            paid: false,
-            comprobante: null,
-            enVerificacion: false
-        };
-
-        refNum.set(data);
-        estadoActual[num] = data;
-    }
-
-    // Mostrar / actualizar panel para este número
     numeroSeleccionado = num;
-    actualizarPanel(num);
-    adminPanel.style.display = "block";
+
+    const ref = db.ref("numeros/" + num);
+
+    if (!estadoActual[num]) {
+        const nombre = prompt("Nombre para el número " + num + ":");
+        if (!nombre) return;
+        ref.set({ name: nombre, paid: false, enVerificacion:false });
+    }
+
+    mostrarPanel(num);
 }
 
-// Actualizar la información mostrada en el panel
-function actualizarPanel(num) {
-    const info = estadoActual[num] || null;
+// === Panel ===
+function mostrarPanel(num) {
+    const info = estadoActual[num];
 
-    panelNum.textContent = num;
+    document.getElementById("panelNum").textContent = num;
+    document.getElementById("panelNombre").textContent = info?.name || "(Libre)";
+    
+    let estado = "DISPONIBLE";
+    if (info) {
+        if (info.paid) estado = "PAGADO";
+        else if (info.enVerificacion) estado = "EN VERIFICACION";
+        else estado = "NO PAGADO";
+    }
+    document.getElementById("panelEstado").textContent = estado;
+    document.getElementById("panelComprobante").textContent = info?.comprobante || "-";
 
-    if (!info) {
-        panelNombre.textContent = "(Libre)";
-        panelEstado.textContent = "DISPONIBLE";
-        panelComprobante.textContent = "-";
+    document.getElementById("adminPanel").style.display = "block";
+}
+
+// === Acciones del panel ===
+document.getElementById("btnLiberar").onclick = () => {
+    db.ref("numeros/"+numeroSeleccionado).remove();
+    document.getElementById("adminPanel").style.display = "none";
+};
+
+document.getElementById("btnPagado").onclick = () => {
+    const act = estadoActual[numeroSeleccionado];
+    db.ref("numeros/"+numeroSeleccionado).update({
+        paid: !act.paid,
+        enVerificacion: false
+    });
+};
+
+document.getElementById("btnNombre").onclick = () => {
+    const nuevo = prompt("Nuevo nombre:", estadoActual[numeroSeleccionado].name);
+    if (nuevo)
+        db.ref("numeros/"+numeroSeleccionado).update({ name: nuevo });
+};
+
+document.getElementById("btnComprobante").onclick = () => {
+    const actual = estadoActual[numeroSeleccionado];
+    let texto = prompt("Comprobante:", actual.comprobante || "");
+    if (texto === null) return;
+
+    db.ref("numeros/"+numeroSeleccionado).update({
+        comprobante: texto || null,
+        enVerificacion: texto && !actual.paid
+    });
+};
+
+// === Descargar CSV (CON CONTRASEÑA) ===
+document.getElementById("btnDescargar").onclick = () => {
+
+    if (!pedirPass()) {
+        alert("Contraseña incorrecta");
         return;
     }
 
-    panelNombre.textContent = info.name || "(Sin nombre)";
+    const filas = ["numero,nombre,estado,comprobante"];
 
-    const enVerificacion = !!info.enVerificacion;
-    const pagado = !!info.paid;
-
-    const estadoTexto = pagado
-        ? "PAGADO"
-        : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
-
-    panelEstado.textContent = estadoTexto;
-    panelComprobante.textContent = info.comprobante ? info.comprobante : "-";
-}
-
-// --- Acciones de los botones del panel ---
-
-btnLiberar.onclick = () => {
-    if (numeroSeleccionado === null) return;
-    const refNum = db.ref("numeros/" + numeroSeleccionado);
-    refNum.remove();
-    delete estadoActual[numeroSeleccionado];
-    adminPanel.style.display = "none";
-    numeroSeleccionado = null;
-};
-
-btnPagado.onclick = () => {
-    if (numeroSeleccionado === null) return;
-    const actual = estadoActual[numeroSeleccionado];
-    if (!actual) return;
-
-    const refNum = db.ref("numeros/" + numeroSeleccionado);
-    const nuevoPagado = !actual.paid;
-    const actualiza = { paid: nuevoPagado };
-    if (nuevoPagado) {
-        actualiza.enVerificacion = false;
-    }
-    refNum.update(actualiza);
-    estadoActual[numeroSeleccionado] = { ...actual, ...actualiza };
-    actualizarPanel(numeroSeleccionado);
-};
-
-btnNombre.onclick = () => {
-    if (numeroSeleccionado === null) return;
-    const actual = estadoActual[numeroSeleccionado];
-    if (!actual) return;
-
-    let nuevoNombre = prompt("Nuevo nombre para el número " + numeroSeleccionado + ":", actual.name);
-    if (!nuevoNombre) return;
-
-    const refNum = db.ref("numeros/" + numeroSeleccionado);
-    refNum.update({ name: nuevoNombre });
-    estadoActual[numeroSeleccionado].name = nuevoNombre;
-    actualizarPanel(numeroSeleccionado);
-};
-
-btnComprobante.onclick = () => {
-    if (numeroSeleccionado === null) return;
-    const actual = estadoActual[numeroSeleccionado];
-    if (!actual) return;
-
-    let textoActual = actual.comprobante || "";
-    let nuevoTexto = prompt(
-        "Descripción o referencia del comprobante (ej: Nequi #12345, foto enviada por WhatsApp):",
-        textoActual
-    );
-
-    if (nuevoTexto === null) {
-        return; // cancelado
-    }
-
-    nuevoTexto = nuevoTexto.trim();
-    const hayComprobante = nuevoTexto.length > 0;
-
-    const refNum = db.ref("numeros/" + numeroSeleccionado);
-    const actualiza = {
-        comprobante: hayComprobante ? nuevoTexto : null,
-        enVerificacion: hayComprobante && !actual.paid
-    };
-
-    refNum.update(actualiza);
-    estadoActual[numeroSeleccionado] = { ...actual, ...actualiza };
-    actualizarPanel(numeroSeleccionado);
-};
-
-// --- Descargar consolidado en CSV ---
-btnDescargar.onclick = () => {
-    const filas = ['numero,nombre,estado,comprobante'];
-
-    for (let i = 0; i < 100; i++) {
-        const num = i.toString().padStart(2, "0");
+    for (let num in estadoActual) {
         const info = estadoActual[num];
-        if (!info) continue; // solo números seleccionados
-
-        const enVerificacion = !!info.enVerificacion;
-        const pagado = !!info.paid;
-        const estado = pagado
+        const estado = info.paid
             ? "PAGADO"
-            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
+            : info.enVerificacion ? "EN VERIFICACION" : "NO PAGADO";
 
-        const nombre = (info.name || "").replace(/"/g, '""');
-        const comp = (info.comprobante || "").replace(/"/g, '""');
-
-        filas.push(`"${num}","${nombre}","${estado}","${comp}"`);
+        filas.push(`${num},"${info.name}","${estado}","${info.comprobante||""}"`);
     }
 
     const csv = filas.join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([csv], {type:"text/csv"});
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
     a.href = url;
     a.download = "rifa_consolidado.csv";
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+
     URL.revokeObjectURL(url);
 };
-</script>
 
+</script>
 </body>
 </html>
