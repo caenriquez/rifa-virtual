@@ -198,7 +198,7 @@
 
 <!-- SDK de Firebase (modo compat para que sea sencillo sin módulos) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <script>
 // 🔐 Contraseña de administrador
@@ -221,8 +221,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 const grid = document.getElementById("grid");
-const estadoActual = {};   // aquí guardamos lo que viene de Firebase
-const numDivs = {};        // referencia a cada div por número
+const estadoActual = {};          // aquí guardamos lo que viene de Firebase
+const numDivs = {};               // referencia a cada div por número
 
 // Referencias a contadores
 const selCountSpan = document.getElementById("selCount");
@@ -264,6 +264,11 @@ const numerosRef = db.ref("numeros");
 // Escuchar cambios en tiempo real
 numerosRef.on("value", (snapshot) => {
     const data = snapshot.val() || {};
+
+    // Limpiar mapa local
+    for (const k in estadoActual) {
+        delete estadoActual[k];
+    }
 
     // Actualizar contadores
     const seleccionados = Object.keys(data).length;
