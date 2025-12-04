@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Rifa 00-99</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f2f2f2;
+        text-align: center;
+        padding: 20px;
+    }
+    h1 { color: #333; }
+
+    .legend {
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        margin: 0 10px;
+    }
+    .legend-color {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: 1px solid #333;
+        margin-right: 5px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 10px;
+        max-width: 450px;
+        margin: auto;
+    }
+    .num {
+        background: white;
+        border: 2px solid #333;
+        padding: 12px;
+        font-size: 18px;
+        cursor: pointer;
+        border-radius: 10px;
+        transition: 0.2s;
+        user-select: none;
+    }
+    .num:hover {
+        background: #d4f0ff;
+    }
+
+    /* Estados */
+    .reservado {
+        background: #ffd54f !important; /* amarillo */
+        border-color: #ffb300 !important;
+    }
+    .pagado {
+        background: #4caf50 !important; /* verde */
+        color: white !important;
+        border-color: #2e7d32 !important;
+    }
+</style>
+</head>
+<body>
+
+<h1>Rifa Virtual 00 - 99</h1>
+<p>Haz clic en un número para asignar nombre y marcar si está pagado.</p>
+
+<div class="legend">
+    <span class="legend-item">
+        <span class="legend-color" style="background:white;"></span> Disponible
+    </span>
+    <span class="legend-item">
+        <span class="legend-color" style="background:#ffd54f;"></span> Reservado / No pagado
+    </span>
+    <span class="legend-item">
+        <span class="legend-color" style="background:#4caf50;"></span> Pagado
+    </span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+// Generar los números 00–99
+const grid = document.getElementById("grid");
+
+for (let i = 0; i < 100; i++) {
+    let num = i.toString().padStart(2, "0");
+    let div = document.createElement("div");
+    div.textContent = num;
+    div.classList.add("num");
+
+    // Cargar estado guardado
+    let saved = localStorage.getItem("n" + num);
+    if (saved) {
+        try {
+            let data = JSON.parse(saved);
+            if (data && data.name) {
+                if (data.paid) {
+                    div.classList.add("pagado");
+                } else {
+                    div.classList.add("reservado");
+                }
+                div.title = `#${num} - ${data.name} - ${data.paid ? "PAGADO" : "NO PAGADO"}`;
+            }
+        } catch(e) {
+            console.error("Error leyendo dato de número", num, e);
+        }
+    }
+
+    div.onclick = () => {
+        let key = "n" + num;
+        let currentStr = localStorage.getItem(key);
+        let current = currentStr ? JSON.parse(currentStr) : null;
+
+        // Si ya está asignado, ofrecer opciones
+        if (current && current.name) {
+            let opcion = prompt(
+                `Número ${num}\n` +
+                `Asignado a: ${current.name}\n` +
+                `Estado: ${current.paid ? "PAGADO" : "NO PAGADO"}\n\n` +
+                `Escribe:\n` +
+                `1 = Editar nombre / estado\n` +
+                `2 = Liberar número\n` +
+                `Cancelar = Salir sin cambios`
+            );
+
+            if (opcion === "2") {
+                // Liberar número
+                localStorage.removeItem(key);
+                div.classList.remove("reservado", "pagado");
+                div.title = "";
+                return;
+            } else if (opcion !== "1") {
+                // Ni editar ni liberar → salir
+                return;
+            }
+            // Si elige 1, continúa a pedir nombre/estado abajo
+        }
+
+        // Pedir nombre
+        let name = prompt(`Ingresa el nombre para el número ${num}:`);
+        if (!name) {
+            return; // si cancela o deja vacío, no hace nada
+        }
+
+        // Preguntar si está pagado
+        let paidConfirm = confirm("¿El número está pagado?\nAceptar = Sí\nCancelar = No");
+        let paid = paidConfirm ? true : false;
+
+        // Guardar en localStorage
+        let data = { name, paid };
+        localStorage.setItem(key, JSON.stringify(data));
+
+        // Actualizar estilos
+        div.classList.remove("reservado", "pagado");
+        if (paid) {
+            div.classList.add("pagado");
+        } else {
+            div.classList.add("reservado");
+        }
+
+        // Tooltip
+        div.title = `#${num} - ${name} - ${paid ? "PAGADO" : "NO PAGADO"}`;
+    };
+
+    grid.appendChild(div);
+}
+</script>
+
+</body>
+</html>
