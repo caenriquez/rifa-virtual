@@ -50,7 +50,6 @@
         background: #d4f0ff;
     }
 
-    /* Estados */
     .reservado {
         background: #ffd54f !important; /* amarillo */
         border-color: #ffb300 !important;
@@ -81,91 +80,103 @@
 
 <div class="grid" id="grid"></div>
 
-<script>
-// Generar los números 00–99
-const grid = document.getElementById("grid");
+<!-- SDK de Firebase (modo compat para que sea sencillo) -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
+<script>
+// 🔥 Pega aquí la config que te dio Firebase
+// const firebaseConfig = { ... };
+const firebaseConfig = {
+  // AQUÍ VA TU CONFIGURACIÓN REAL DE FIREBASE
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const grid = document.getElementById("grid");
+const estadoActual = {};
+const numDivs = {};
+
+// Crear los 100 números
 for (let i = 0; i < 100; i++) {
     let num = i.toString().padStart(2, "0");
     let div = document.createElement("div");
     div.textContent = num;
     div.classList.add("num");
-
-    // Cargar estado guardado
-    let saved = localStorage.getItem("n" + num);
-    if (saved) {
-        try {
-            let data = JSON.parse(saved);
-            if (data && data.name) {
-                if (data.paid) {
-                    div.classList.add("pagado");
-                } else {
-                    div.classList.add("reservado");
-                }
-                div.title = `#${num} - ${data.name} - ${data.paid ? "PAGADO" : "NO PAGADO"}`;
-            }
-        } catch(e) {
-            console.error("Error leyendo dato de número", num, e);
-        }
-    }
+    numDivs[num] = div;
 
     div.onclick = () => {
-        let key = "n" + num;
-        let currentStr = localStorage.getItem(key);
-        let current = currentStr ? JSON.parse(currentStr) : null;
+        manejarClickNumero(num);
+    };
 
-        // Si ya está asignado, ofrecer opciones
-        if (current && current.name) {
-            let opcion = prompt(
-                `Número ${num}\n` +
-                `Asignado a: ${current.name}\n` +
-                `Estado: ${current.paid ? "PAGADO" : "NO PAGADO"}\n\n` +
-                `Escribe:\n` +
-                `1 = Editar nombre / estado\n` +
-                `2 = Liberar número\n` +
-                `Cancelar = Salir sin cambios`
-            );
+    grid.appendChild(div);
+}
 
-            if (opcion === "2") {
-                // Liberar número
-                localStorage.removeItem(key);
-                div.classList.remove("reservado", "pagado");
-                div.title = "";
-                return;
-            } else if (opcion !== "1") {
-                // Ni editar ni liberar → salir
-                return;
-            }
-            // Si elige 1, continúa a pedir nombre/estado abajo
-        }
+// Escuchar cambios en tiempo real
+const numerosRef = db.ref("numeros");
 
-        // Pedir nombre
-        let name = prompt(`Ingresa el nombre para el número ${num}:`);
-        if (!name) {
-            return; // si cancela o deja vacío, no hace nada
-        }
+numerosRef.on("value", (snapshot) => {
+    const data = snapshot.val() || {};
 
-        // Preguntar si está pagado
-        let paidConfirm = confirm("¿El número está pagado?\nAceptar = Sí\nCancelar = No");
-        let paid = paidConfirm ? true : false;
-
-        // Guardar en localStorage
-        let data = { name, paid };
-        localStorage.setItem(key, JSON.stringify(data));
-
-        // Actualizar estilos
+    // Limpiar todos
+    for (let i = 0; i < 100; i++) {
+        let n = i.toString().padStart(2, "0");
+        let div = numDivs[n];
         div.classList.remove("reservado", "pagado");
-        if (paid) {
+        div.title = "";
+    }
+
+    // Guardar y aplicar estados
+    Object.keys(data).forEach(num => {
+        estadoActual[num] = data[num];
+        const info = data[num];
+        const div = numDivs[num];
+        if (!div) return;
+        div.classList.remove("reservado", "pagado");
+        if (info.paid) {
             div.classList.add("pagado");
         } else {
             div.classList.add("reservado");
         }
+        div.title = `#${num} - ${info.name} - ${info.paid ? "PAGADO" : "NO PAGADO"}`;
+    });
+});
 
-        // Tooltip
-        div.title = `#${num} - ${name} - ${paid ? "PAGADO" : "NO PAGADO"}`;
-    };
+// Manejar clic
+function manejarClickNumero(num) {
+    const refNum = db.ref("numeros/" + num);
+    const actual = estadoActual[num] || null;
 
-    grid.appendChild(div);
+    if (actual && actual.name) {
+        let opcion = prompt(
+            `Número ${num}\n` +
+            `Asignado a: ${actual.name}\n` +
+            `Estado: ${actual.paid ? "PAGADO" : "NO PAGADO"}\n\n` +
+            `Escribe:\n` +
+            `1 = Editar nombre / estado\n` +
+            `2 = Liberar número\n` +
+            `Cancelar = Salir sin cambios`
+        );
+
+        if (opcion === "2") {
+            refNum.remove();
+            delete estadoActual[num];
+            return;
+        } else if (opcion !== "1") {
+            return;
+        }
+    }
+
+    let name = prompt(`Ingresa el nombre para el número ${num}:`);
+    if (!name) return;
+
+    let paidConfirm = confirm("¿El número está pagado?\nAceptar = Sí\nCancelar = No");
+    let paid = !!paidConfirm;
+
+    const data = { name, paid };
+    refNum.set(data);
+    estadoActual[num] = data;
 }
 </script>
 
