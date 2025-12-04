@@ -168,7 +168,7 @@
 
 <p style="margin-top:18px;">
     Solo el administrador puede registrar y gestionar los números.<br>
-    Al seleccionar un número se pedirá la contraseña.
+    Al seleccionar un número o descargar el consolidado se pedirá la contraseña.
 </p>
 
 <div class="legend">
@@ -485,8 +485,13 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// --- Descargar consolidado en CSV ---
+// --- Descargar consolidado en CSV (solo admin) ---
 btnDescargar.onclick = () => {
+    if (!solicitarPasswordAdmin()) {
+        alert("Contraseña incorrecta. No se descargará el consolidado.");
+        return;
+    }
+
     const filas = ['numero,nombre,estado,comprobante'];
 
     for (let i = 0; i < 100; i++) {
