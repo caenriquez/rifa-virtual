@@ -45,19 +45,26 @@
         font-size: 16px;
     }
 
-    /* 🎯 GRID TOTALMENTE CENTRADO */
-    .grid-container {
-        width: 100%;
-        display: flex;
-        justify-content: center;
-        margin-top: 15px;
+    .download-btn {
+        margin-bottom: 20px;
+        padding: 6px 14px;
+        font-size: 14px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        background: #1976d2;
+        color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
+    .download-btn:hover { background: #0d47a1; }
+
+    /* 🎯 GRID CENTRADO */
     .grid {
         display: grid;
         grid-template-columns: repeat(10, 1fr);
         gap: 10px;
-        width: 480px;
-        max-width: 100%;
+        max-width: 480px;
+        margin: 15px auto 0 auto; /* centra el talonario */
     }
 
     .num {
@@ -75,26 +82,11 @@
         align-items: center;
         justify-content: center;
     }
-    .num:hover {
-        background: #d4f0ff;
-    }
+    .num:hover { background: #d4f0ff; }
 
     .reservado { background: #ffd54f !important; border-color: #ffb300 !important; }
     .verificacion { background: #64b5f6 !important; border-color: #1976d2 !important; color: #fff !important; }
     .pagado { background: #4caf50 !important; color: white !important; border-color: #2e7d32 !important; }
-
-    .download-btn {
-        margin-bottom: 20px;
-        padding: 6px 14px;
-        font-size: 14px;
-        border-radius: 8px;
-        border: none;
-        cursor: pointer;
-        background: #1976d2;
-        color: #fff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .download-btn:hover { background: #0d47a1; }
 
     /* Panel admin */
     .admin-panel {
@@ -133,7 +125,7 @@
 <body>
 
 <h1>Sensacional Rifa de $1.000.000 de pesos</h1>
-<h2>Juega el 20 de diciembre de 2025 – Valor del número: $20.000 pesos</h2>
+<h2>Juega el 20 de diciembre de 2025 – Valor del número: $10.000 pesos</h2>
 <div class="info-pago">
     Se puede pagar por transferencia a Nequi: <strong>3116403643</strong>
 </div>
@@ -154,9 +146,7 @@
 
 <button id="btnDescargar" class="download-btn">Descargar consolidado (CSV)</button>
 
-<div class="grid-container">
-    <div class="grid" id="grid"></div>
-</div>
+<div class="grid" id="grid"></div>
 
 <!-- Panel de administración -->
 <div id="adminPanel" class="admin-panel" style="display:none;">
@@ -178,7 +168,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <script>
-
 const ADMIN_PASSWORD = "1030";
 
 firebase.initializeApp({
@@ -198,7 +187,7 @@ const grid = document.getElementById("grid");
 const selCountSpan = document.getElementById("selCount");
 const freeCountSpan = document.getElementById("freeCount");
 
-// === Crear los 100 números ===
+// Crear 00–99
 for (let i = 0; i < 100; i++) {
     const num = i.toString().padStart(2, "0");
     const div = document.createElement("div");
@@ -208,27 +197,28 @@ for (let i = 0; i < 100; i++) {
     grid.appendChild(div);
 }
 
-// === Leer Firebase ===
+// Escuchar Firebase
 db.ref("numeros").on("value", snap => {
     const data = snap.val() || {};
 
-    Object.keys(data).forEach(k => estadoActual[k] = data[k]);
-    Object.keys(estadoActual).forEach(k => { if (!data[k]) delete estadoActual[k] });
+    // sincronia local
+    for (const k in estadoActual) delete estadoActual[k];
+    for (const k in data) estadoActual[k] = data[k];
 
-    // Contadores
-    selCountSpan.textContent = Object.keys(data).length;
-    freeCountSpan.textContent = 100 - Object.keys(data).length;
+    const ocupados = Object.keys(data).length;
+    selCountSpan.textContent = ocupados;
+    freeCountSpan.textContent = 100 - ocupados;
 
-    // Reset estilos
+    // reset estilos
     grid.querySelectorAll(".num").forEach(div => {
         div.classList.remove("reservado","verificacion","pagado");
         div.title = "";
     });
 
-    // Colorear
-    for (let num in data) {
+    for (const num in data) {
         const info = data[num];
         const div = [...grid.children].find(x => x.textContent === num);
+        if (!div) continue;
 
         if (info.paid) div.classList.add("pagado");
         else if (info.enVerificacion) div.classList.add("verificacion");
@@ -240,24 +230,21 @@ db.ref("numeros").on("value", snap => {
 
         div.title = `${num} - ${info.name} - ${estado}`;
     }
+
+    if (numeroSeleccionado !== null) mostrarPanel(numeroSeleccionado);
 });
 
-// === Pedir contraseña ===
 function pedirPass() {
     return prompt("Contraseña de administrador:") === ADMIN_PASSWORD;
 }
 
-// === Registrar o abrir panel ===
 let numeroSeleccionado = null;
 
 function manejarClick(num) {
-
     if (!pedirPass()) {
         alert("Contraseña incorrecta");
         return;
     }
-
-    numeroSeleccionado = num;
 
     const ref = db.ref("numeros/" + num);
 
@@ -267,16 +254,16 @@ function manejarClick(num) {
         ref.set({ name: nombre, paid: false, enVerificacion:false });
     }
 
+    numeroSeleccionado = num;
     mostrarPanel(num);
 }
 
-// === Panel ===
 function mostrarPanel(num) {
     const info = estadoActual[num];
 
     document.getElementById("panelNum").textContent = num;
     document.getElementById("panelNombre").textContent = info?.name || "(Libre)";
-    
+
     let estado = "DISPONIBLE";
     if (info) {
         if (info.paid) estado = "PAGADO";
@@ -289,40 +276,42 @@ function mostrarPanel(num) {
     document.getElementById("adminPanel").style.display = "block";
 }
 
-// === Acciones del panel ===
+// Botones panel
 document.getElementById("btnLiberar").onclick = () => {
-    db.ref("numeros/"+numeroSeleccionado).remove();
+    if (!numeroSeleccionado) return;
+    db.ref("numeros/" + numeroSeleccionado).remove();
     document.getElementById("adminPanel").style.display = "none";
 };
 
 document.getElementById("btnPagado").onclick = () => {
-    const act = estadoActual[numeroSeleccionado];
-    db.ref("numeros/"+numeroSeleccionado).update({
-        paid: !act.paid,
+    const info = estadoActual[numeroSeleccionado];
+    if (!info) return;
+    db.ref("numeros/" + numeroSeleccionado).update({
+        paid: !info.paid,
         enVerificacion: false
     });
 };
 
 document.getElementById("btnNombre").onclick = () => {
-    const nuevo = prompt("Nuevo nombre:", estadoActual[numeroSeleccionado].name);
-    if (nuevo)
-        db.ref("numeros/"+numeroSeleccionado).update({ name: nuevo });
+    const info = estadoActual[numeroSeleccionado];
+    if (!info) return;
+    const nuevo = prompt("Nuevo nombre:", info.name);
+    if (nuevo) db.ref("numeros/" + numeroSeleccionado).update({ name: nuevo });
 };
 
 document.getElementById("btnComprobante").onclick = () => {
-    const actual = estadoActual[numeroSeleccionado];
-    let texto = prompt("Comprobante:", actual.comprobante || "");
+    const info = estadoActual[numeroSeleccionado];
+    if (!info) return;
+    let texto = prompt("Comprobante:", info.comprobante || "");
     if (texto === null) return;
-
-    db.ref("numeros/"+numeroSeleccionado).update({
+    db.ref("numeros/" + numeroSeleccionado).update({
         comprobante: texto || null,
-        enVerificacion: texto && !actual.paid
+        enVerificacion: !!texto && !info.paid
     });
 };
 
-// === Descargar CSV (CON CONTRASEÑA) ===
+// Descargar CSV (pide clave)
 document.getElementById("btnDescargar").onclick = () => {
-
     if (!pedirPass()) {
         alert("Contraseña incorrecta");
         return;
@@ -330,28 +319,26 @@ document.getElementById("btnDescargar").onclick = () => {
 
     const filas = ["numero,nombre,estado,comprobante"];
 
-    for (let num in estadoActual) {
+    for (const num in estadoActual) {
         const info = estadoActual[num];
         const estado = info.paid
             ? "PAGADO"
             : info.enVerificacion ? "EN VERIFICACION" : "NO PAGADO";
-
-        filas.push(`${num},"${info.name}","${estado}","${info.comprobante||""}"`);
+        const nombre = (info.name || "").replace(/"/g,'""');
+        const comp = (info.comprobante || "").replace(/"/g,'""');
+        filas.push(`"${num}","${nombre}","${estado}","${comp}"`);
     }
 
-    const csv = filas.join("\n");
-    const blob = new Blob([csv], {type:"text/csv"});
+    const blob = new Blob([filas.join("\n")], {type:"text/csv;charset=utf-8;"});
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
     a.download = "rifa_consolidado.csv";
+    document.body.appendChild(a);
     a.click();
-
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
-
 </script>
 </body>
 </html>
-
