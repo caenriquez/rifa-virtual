@@ -10,10 +10,21 @@
         text-align: center;
         padding: 20px;
     }
-    h1 { color: #333; }
+    h1 { color: #333; margin-bottom: 5px; }
+    h2 { color: #555; font-size: 18px; margin-top: 5px; }
+    .info-pago {
+        margin-top: 8px;
+        font-size: 14px;
+        color: #222;
+        padding: 6px 10px;
+        display: inline-block;
+        border-radius: 8px;
+        background: #fff3cd;
+        border: 1px solid #ffe08a;
+    }
 
     .legend {
-        margin-bottom: 15px;
+        margin: 18px 0;
         font-size: 14px;
     }
     .legend-item {
@@ -33,18 +44,19 @@
         display: grid;
         grid-template-columns: repeat(10, 1fr);
         gap: 10px;
-        max-width: 450px;
-        margin: auto;
+        max-width: 520px;
+        margin: 0 auto;
     }
     .num {
         background: white;
         border: 2px solid #333;
-        padding: 12px;
-        font-size: 18px;
+        padding: 18px;
+        font-size: 22px;
         cursor: pointer;
-        border-radius: 10px;
+        border-radius: 12px;
         transition: 0.2s;
         user-select: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .num:hover {
         background: #d4f0ff;
@@ -53,6 +65,11 @@
     .reservado {
         background: #ffd54f !important; /* amarillo */
         border-color: #ffb300 !important;
+    }
+    .verificacion {
+        background: #64b5f6 !important; /* azul */
+        border-color: #1976d2 !important;
+        color: #fff !important;
     }
     .pagado {
         background: #4caf50 !important; /* verde */
@@ -63,8 +80,13 @@
 </head>
 <body>
 
-<h1>Rifa Virtual 00 - 99</h1>
-<p>Haz clic en un número para asignar nombre y marcar si está pagado.</p>
+<h1>Sensacional Rifa de $1.000.000 de pesos</h1>
+<h2>Juega el 20 de diciembre de 2025, con la loteria de Boyaca – Valor del número: $10.000 pesos</h2>
+<div class="info-pago">
+    Se puede pagar por transferencia a Nequi: <strong>3116403643</strong>
+</div>
+
+<p style="margin-top:18px;">Haz clic en un número para asignar nombre. Solo el administrador puede marcarlo como pagado, cambiar el nombre, gestionar el comprobante o liberarlo.</p>
 
 <div class="legend">
     <span class="legend-item">
@@ -72,6 +94,9 @@
     </span>
     <span class="legend-item">
         <span class="legend-color" style="background:#ffd54f;"></span> Reservado / No pagado
+    </span>
+    <span class="legend-item">
+        <span class="legend-color" style="background:#64b5f6;"></span> En verificación
     </span>
     <span class="legend-item">
         <span class="legend-color" style="background:#4caf50;"></span> Pagado
@@ -85,6 +110,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <script>
+// 🔐 Contraseña de administrador
+const ADMIN_PASSWORD = "1030";
+
 // Configuración REAL de tu proyecto Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC7-pRwzbLgQGkJq1EnO9AcFHPIYKv-1WQ",
@@ -131,7 +159,7 @@ numerosRef.on("value", (snapshot) => {
     for (let i = 0; i < 100; i++) {
         let n = i.toString().padStart(2, "0");
         let div = numDivs[n];
-        div.classList.remove("reservado", "pagado");
+        div.classList.remove("reservado", "verificacion", "pagado");
         div.title = "";
     }
 
@@ -142,51 +170,162 @@ numerosRef.on("value", (snapshot) => {
         const div = numDivs[num];
         if (!div) return;
 
-        div.classList.remove("reservado", "pagado");
-        if (info.paid) {
+        div.classList.remove("reservado", "verificacion", "pagado");
+
+        const enVerificacion = !!info.enVerificacion;
+        const pagado = !!info.paid;
+
+        if (pagado) {
             div.classList.add("pagado");
+        } else if (enVerificacion) {
+            div.classList.add("verificacion");
         } else {
             div.classList.add("reservado");
         }
-        div.title = `#${num} - ${info.name} - ${info.paid ? "PAGADO" : "NO PAGADO"}`;
+
+        const estadoTexto = pagado
+            ? "PAGADO"
+            : (enVerificacion ? "EN VERIFICACIÓN" : "NO PAGADO");
+
+        let extra = "";
+        if (info.comprobante) {
+            extra = " | Comprobante: " + info.comprobante;
+        }
+
+        div.title = `#${num} - ${info.name} - ${estadoTexto}${extra}`;
     });
 });
+
+// Función para pedir contraseña de administrador
+function solicitarPasswordAdmin() {
+    const intento = prompt("Ingrese la contraseña de administrador:");
+    if (intento === null) return false; // Cancelar
+    return intento === ADMIN_PASSWORD;
+}
 
 // Manejar clic sobre un número
 function manejarClickNumero(num) {
     const refNum = db.ref("numeros/" + num);
     const actual = estadoActual[num] || null;
 
+    // Si ya está asignado, mostrar menú de administrador
     if (actual && actual.name) {
+        const estadoTexto = actual.paid
+            ? "PAGADO"
+            : (actual.enVerificacion ? "EN VERIFICACIÓN" : "NO PAGADO");
+
         let opcion = prompt(
             `Número ${num}\n` +
             `Asignado a: ${actual.name}\n` +
-            `Estado: ${actual.paid ? "PAGADO" : "NO PAGADO"}\n\n` +
-            `Escribe:\n` +
-            `1 = Editar nombre / estado\n` +
-            `2 = Liberar número\n` +
+            `Estado: ${estadoTexto}\n` +
+            (actual.comprobante ? `Comprobante actual: ${actual.comprobante}\n` : "") +
+            `\nEscribe:\n` +
+            `1 = Marcar / desmarcar PAGADO\n` +
+            `2 = Cambiar nombre\n` +
+            `3 = Liberar número\n` +
+            `4 = Gestionar comprobante / estado de verificación\n` +
             `Cancelar = Salir sin cambios`
         );
 
+        if (!opcion) return; // cancelado
+
+        if (!["1", "2", "3", "4"].includes(opcion)) {
+            alert("Opción no válida.");
+            return;
+        }
+
+        // Solo el admin puede modificar
+        if (!solicitarPasswordAdmin()) {
+            alert("Contraseña incorrecta. No se realizaron cambios.");
+            return;
+        }
+
+        if (opcion === "1") {
+            // Alternar pagado / no pagado
+            const nuevoPagado = !actual.paid;
+            const actualiza = { paid: nuevoPagado };
+            // Si se marca como pagado, dejamos de estar "en verificación"
+            if (nuevoPagado) {
+                actualiza.enVerificacion = false;
+            }
+            refNum.update(actualiza);
+            estadoActual[num] = { ...actual, ...actualiza };
+            return;
+        }
+
         if (opcion === "2") {
+            // Cambiar nombre
+            let nuevoNombre = prompt("Nuevo nombre para el número " + num + ":", actual.name);
+            if (!nuevoNombre) return;
+            refNum.update({ name: nuevoNombre });
+            estadoActual[num].name = nuevoNombre;
+            return;
+        }
+
+        if (opcion === "3") {
             // Liberar número
             refNum.remove();
             delete estadoActual[num];
             return;
-        } else if (opcion !== "1") {
-            // Ni editar ni liberar → salir
+        }
+
+        if (opcion === "4") {
+            // Gestionar comprobante / verificación
+            let textoActual = actual.comprobante || "";
+            let nuevoTexto = prompt(
+                "Descripción o referencia del comprobante (ej: Nequi #12345, foto enviada por WhatsApp):",
+                textoActual
+            );
+
+            if (nuevoTexto === null) {
+                return; // cancelado
+            }
+
+            nuevoTexto = nuevoTexto.trim();
+            const hayComprobante = nuevoTexto.length > 0;
+
+            const actualiza = {
+                comprobante: hayComprobante ? nuevoTexto : null,
+                enVerificacion: hayComprobante && !actual.paid
+            };
+
+            refNum.update(actualiza);
+            estadoActual[num] = { ...actual, ...actualiza };
             return;
         }
-        // Si elige 1, seguimos abajo pidiendo nuevo nombre/estado
+
+        return;
     }
 
+    // Si el número está libre: cualquier persona puede reservarlo (NO pagado, sin verificación todavía)
     let name = prompt(`Ingresa el nombre para el número ${num}:`);
     if (!name) return;
 
-    let paidConfirm = confirm("¿El número está pagado?\nAceptar = Sí\nCancelar = No");
-    let paid = !!paidConfirm;
+    // Preguntar si ya tiene comprobante para dejarlo "en verificación"
+    let quiereComprobante = confirm(
+        "¿Deseas registrar ahora un comprobante o referencia de pago para dejar el número EN VERIFICACIÓN?\nAceptar = Sí\nCancelar = No"
+    );
 
-    const data = { name, paid };
+    let comprobante = null;
+    let enVerificacion = false;
+
+    if (quiereComprobante) {
+        let textoComp = prompt(
+            "Escribe una descripción o referencia del comprobante:\n(ej: Nequi #12345, pantallazo enviado por WhatsApp)"
+        );
+        if (textoComp && textoComp.trim().length > 0) {
+            comprobante = textoComp.trim();
+            enVerificacion = true;
+        }
+    }
+
+    const data = {
+        name: name,
+        paid: false,           // siempre inicia como NO pagado
+        comprobante: comprobante,
+        enVerificacion: enVerificacion
+    };
+
     refNum.set(data);
     estadoActual[num] = data;
 }
