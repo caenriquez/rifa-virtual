@@ -81,6 +81,61 @@
         color: white !important;
         border-color: #2e7d32 !important;
     }
+
+    /* Panel administrador */
+    .admin-panel {
+        margin-top: 25px;
+        padding: 15px;
+        max-width: 520px;
+        margin-left: auto;
+        margin-right: auto;
+        background: #ffffff;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        text-align: left;
+        font-size: 14px;
+    }
+    .admin-panel h3 {
+        margin-top: 0;
+        text-align: center;
+    }
+    .admin-row {
+        margin: 4px 0;
+    }
+    .admin-label {
+        font-weight: bold;
+    }
+    .admin-buttons {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+    .admin-btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+    }
+    .btn-liberar {
+        background: #f44336;
+        color: #fff;
+    }
+    .btn-pagado {
+        background: #4caf50;
+        color: #fff;
+    }
+    .btn-nombre {
+        background: #ff9800;
+        color: #fff;
+    }
+    .btn-comprobante {
+        background: #2196f3;
+        color: #fff;
+    }
 </style>
 </head>
 <body>
@@ -91,7 +146,10 @@
     Se puede pagar por transferencia a Nequi: <strong>3116403643</strong>
 </div>
 
-<p style="margin-top:18px;">Haz clic en un número para asignar nombre. Solo el administrador puede marcarlo como pagado, cambiar el nombre, gestionar el comprobante o liberarlo.</p>
+<p style="margin-top:18px;">
+    Solo el administrador puede registrar y gestionar los números.<br>
+    Al seleccionar un número se pedirá la contraseña.
+</p>
 
 <div class="legend">
     <span class="legend-item">
@@ -115,9 +173,32 @@
 
 <div class="grid" id="grid"></div>
 
+<!-- Panel de administración -->
+<div id="adminPanel" class="admin-panel" style="display:none;">
+    <h3>Panel de administración</h3>
+    <div class="admin-row">
+        <span class="admin-label">Número:</span> <span id="panelNum"></span>
+    </div>
+    <div class="admin-row">
+        <span class="admin-label">Nombre:</span> <span id="panelNombre"></span>
+    </div>
+    <div class="admin-row">
+        <span class="admin-label">Estado:</span> <span id="panelEstado"></span>
+    </div>
+    <div class="admin-row">
+        <span class="admin-label">Comprobante:</span> <span id="panelComprobante"></span>
+    </div>
+    <div class="admin-buttons">
+        <button class="admin-btn btn-liberar" id="btnLiberar">Liberar número</button>
+        <button class="admin-btn btn-pagado" id="btnPagado">Marcar / desmarcar pagado</button>
+        <button class="admin-btn btn-nombre" id="btnNombre">Cambiar nombre</button>
+        <button class="admin-btn btn-comprobante" id="btnComprobante">Gestionar comprobante</button>
+    </div>
+</div>
+
 <!-- SDK de Firebase (modo compat para que sea sencillo sin módulos) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <script>
 // 🔐 Contraseña de administrador
@@ -146,6 +227,21 @@ const numDivs = {};        // referencia a cada div por número
 // Referencias a contadores
 const selCountSpan = document.getElementById("selCount");
 const freeCountSpan = document.getElementById("freeCount");
+
+// Panel admin
+const adminPanel = document.getElementById("adminPanel");
+const panelNum = document.getElementById("panelNum");
+const panelNombre = document.getElementById("panelNombre");
+const panelEstado = document.getElementById("panelEstado");
+const panelComprobante = document.getElementById("panelComprobante");
+
+const btnLiberar = document.getElementById("btnLiberar");
+const btnPagado = document.getElementById("btnPagado");
+const btnNombre = document.getElementById("btnNombre");
+const btnComprobante = document.getElementById("btnComprobante");
+
+// Número actualmente seleccionado en el panel
+let numeroSeleccionado = null;
 
 // Crear los 100 números 00–99
 for (let i = 0; i < 100; i++) {
@@ -214,6 +310,11 @@ numerosRef.on("value", (snapshot) => {
 
         div.title = `#${num} - ${info.name} - ${estadoTexto}${extra}`;
     });
+
+    // Si hay un número seleccionado, refrescar el panel
+    if (numeroSeleccionado !== null) {
+        actualizarPanel(numeroSeleccionado);
+    }
 });
 
 // Función para pedir contraseña de administrador
@@ -225,130 +326,132 @@ function solicitarPasswordAdmin() {
 
 // Manejar clic sobre un número
 function manejarClickNumero(num) {
-    const refNum = db.ref("numeros/" + num);
-    const actual = estadoActual[num] || null;
-
-    // Si ya está asignado, mostrar menú de administrador
-    if (actual && actual.name) {
-        const estadoTexto = actual.paid
-            ? "PAGADO"
-            : (actual.enVerificacion ? "EN VERIFICACIÓN" : "NO PAGADO");
-
-        let opcion = prompt(
-            `Número ${num}\n` +
-            `Asignado a: ${actual.name}\n` +
-            `Estado: ${estadoTexto}\n` +
-            (actual.comprobante ? `Comprobante actual: ${actual.comprobante}\n` : "") +
-            `\nEscribe:\n` +
-            `1 = Marcar / desmarcar PAGADO\n` +
-            `2 = Cambiar nombre\n` +
-            `3 = Liberar número\n` +
-            `4 = Gestionar comprobante / estado de verificación\n` +
-            `Cancelar = Salir sin cambios`
-        );
-
-        if (!opcion) return; // cancelado
-
-        if (!["1", "2", "3", "4"].includes(opcion)) {
-            alert("Opción no válida.");
-            return;
-        }
-
-        // Solo el admin puede modificar
-        if (!solicitarPasswordAdmin()) {
-            alert("Contraseña incorrecta. No se realizaron cambios.");
-            return;
-        }
-
-        if (opcion === "1") {
-            // Alternar pagado / no pagado
-            const nuevoPagado = !actual.paid;
-            const actualiza = { paid: nuevoPagado };
-            // Si se marca como pagado, dejamos de estar "en verificación"
-            if (nuevoPagado) {
-                actualiza.enVerificacion = false;
-            }
-            refNum.update(actualiza);
-            estadoActual[num] = { ...actual, ...actualiza };
-            return;
-        }
-
-        if (opcion === "2") {
-            // Cambiar nombre
-            let nuevoNombre = prompt("Nuevo nombre para el número " + num + ":", actual.name);
-            if (!nuevoNombre) return;
-            refNum.update({ name: nuevoNombre });
-            estadoActual[num].name = nuevoNombre;
-            return;
-        }
-
-        if (opcion === "3") {
-            // Liberar número
-            refNum.remove();
-            delete estadoActual[num];
-            return;
-        }
-
-        if (opcion === "4") {
-            // Gestionar comprobante / verificación
-            let textoActual = actual.comprobante || "";
-            let nuevoTexto = prompt(
-                "Descripción o referencia del comprobante (ej: Nequi #12345, foto enviada por WhatsApp):",
-                textoActual
-            );
-
-            if (nuevoTexto === null) {
-                return; // cancelado
-            }
-
-            nuevoTexto = nuevoTexto.trim();
-            const hayComprobante = nuevoTexto.length > 0;
-
-            const actualiza = {
-                comprobante: hayComprobante ? nuevoTexto : null,
-                enVerificacion: hayComprobante && !actual.paid
-            };
-
-            refNum.update(actualiza);
-            estadoActual[num] = { ...actual, ...actualiza };
-            return;
-        }
-
+    // Siempre pedir contraseña para acceder
+    if (!solicitarPasswordAdmin()) {
+        alert("Contraseña incorrecta. No se realizaron cambios.");
         return;
     }
 
-    // Si el número está libre: cualquier persona puede reservarlo (NO pagado, sin verificación todavía)
-    let name = prompt(`Ingresa el nombre para el número ${num}:`);
-    if (!name) return;
+    const refNum = db.ref("numeros/" + num);
+    const actual = estadoActual[num] || null;
 
-    // Preguntar si ya tiene comprobante para dejarlo "en verificación"
-    let quiereComprobante = confirm(
-        "¿Deseas registrar ahora un comprobante o referencia de pago para dejar el número EN VERIFICACIÓN?\nAceptar = Sí\nCancelar = No"
-    );
+    // Si el número está libre: registrar nuevo nombre
+    if (!actual) {
+        let name = prompt(`Ingresa el nombre para el número ${num}:`);
+        if (!name) return;
 
-    let comprobante = null;
-    let enVerificacion = false;
+        const data = {
+            name: name,
+            paid: false,
+            comprobante: null,
+            enVerificacion: false
+        };
 
-    if (quiereComprobante) {
-        let textoComp = prompt(
-            "Escribe una descripción o referencia del comprobante:\n(ej: Nequi #12345, pantallazo enviado por WhatsApp)"
-        );
-        if (textoComp && textoComp.trim().length > 0) {
-            comprobante = textoComp.trim();
-            enVerificacion = true;
-        }
+        refNum.set(data);
+        estadoActual[num] = data;
     }
 
-    const data = {
-        name: name,
-        paid: false,           // siempre inicia como NO pagado
-        comprobante: comprobante,
-        enVerificacion: enVerificacion
+    // Mostrar / actualizar panel para este número
+    numeroSeleccionado = num;
+    actualizarPanel(num);
+    adminPanel.style.display = "block";
+}
+
+// Actualizar la información mostrada en el panel
+function actualizarPanel(num) {
+    const info = estadoActual[num] || null;
+
+    panelNum.textContent = num;
+
+    if (!info) {
+        panelNombre.textContent = "(Libre)";
+        panelEstado.textContent = "DISPONIBLE";
+        panelComprobante.textContent = "-";
+        return;
+    }
+
+    panelNombre.textContent = info.name || "(Sin nombre)";
+
+    const enVerificacion = !!info.enVerificacion;
+    const pagado = !!info.paid;
+
+    const estadoTexto = pagado
+        ? "PAGADO"
+        : (enVerificacion ? "EN VERIFICACIÓN" : "NO PAGADO");
+
+    panelEstado.textContent = estadoTexto;
+    panelComprobante.textContent = info.comprobante ? info.comprobante : "-";
+}
+
+// --- Acciones de los botones del panel ---
+
+btnLiberar.onclick = () => {
+    if (numeroSeleccionado === null) return;
+    const refNum = db.ref("numeros/" + numeroSeleccionado);
+    refNum.remove();
+    delete estadoActual[numeroSeleccionado];
+    adminPanel.style.display = "none";
+    numeroSeleccionado = null;
+};
+
+btnPagado.onclick = () => {
+    if (numeroSeleccionado === null) return;
+    const actual = estadoActual[numeroSeleccionado];
+    if (!actual) return;
+
+    const refNum = db.ref("numeros/" + numeroSeleccionado);
+    const nuevoPagado = !actual.paid;
+    const actualiza = { paid: nuevoPagado };
+    if (nuevoPagado) {
+        actualiza.enVerificacion = false;
+    }
+    refNum.update(actualiza);
+    estadoActual[numeroSeleccionado] = { ...actual, ...actualiza };
+    actualizarPanel(numeroSeleccionado);
+};
+
+btnNombre.onclick = () => {
+    if (numeroSeleccionado === null) return;
+    const actual = estadoActual[numeroSeleccionado];
+    if (!actual) return;
+
+    let nuevoNombre = prompt("Nuevo nombre para el número " + numeroSeleccionado + ":", actual.name);
+    if (!nuevoNombre) return;
+
+    const refNum = db.ref("numeros/" + numeroSeleccionado);
+    refNum.update({ name: nuevoNombre });
+    estadoActual[numeroSeleccionado].name = nuevoNombre;
+    actualizarPanel(numeroSeleccionado);
+};
+
+btnComprobante.onclick = () => {
+    if (numeroSeleccionado === null) return;
+    const actual = estadoActual[numeroSeleccionado];
+    if (!actual) return;
+
+    let textoActual = actual.comprobante || "";
+    let nuevoTexto = prompt(
+        "Descripción o referencia del comprobante (ej: Nequi #12345, foto enviada por WhatsApp):",
+        textoActual
+    );
+
+    if (nuevoTexto === null) {
+        return; // cancelado
+    }
+
+    nuevoTexto = nuevoTexto.trim();
+    const hayComprobante = nuevoTexto.length > 0;
+
+    const refNum = db.ref("numeros/" + numeroSeleccionado);
+    const actualiza = {
+        comprobante: hayComprobante ? nuevoTexto : null,
+        enVerificacion: hayComprobante && !actual.paid
     };
 
-    refNum.set(data);
-    estadoActual[num] = data;
-}
+    refNum.update(actualiza);
+    estadoActual[numeroSeleccionado] = { ...actual, ...actualiza };
+    actualizarPanel(numeroSeleccionado);
+};
 </script>
 
 </body>
