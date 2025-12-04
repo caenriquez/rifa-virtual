@@ -41,8 +41,23 @@
     }
 
     .resumen {
-        margin-bottom: 18px;
+        margin-bottom: 10px;
         font-size: 16px;
+    }
+
+    .download-btn {
+        margin-bottom: 20px;
+        padding: 6px 14px;
+        font-size: 14px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        background: #1976d2;
+        color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .download-btn:hover {
+        background: #0d47a1;
     }
 
     .grid {
@@ -62,6 +77,11 @@
         transition: 0.2s;
         user-select: none;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+        /* Centramos el contenido dentro del cuadrito */
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .num:hover {
         background: #d4f0ff;
@@ -171,6 +191,10 @@
     Números libres: <strong id="freeCount">100</strong>
 </div>
 
+<button id="btnDescargar" class="download-btn">
+    Descargar consolidado (CSV)
+</button>
+
 <div class="grid" id="grid"></div>
 
 <!-- Panel de administración -->
@@ -240,6 +264,9 @@ const btnPagado = document.getElementById("btnPagado");
 const btnNombre = document.getElementById("btnNombre");
 const btnComprobante = document.getElementById("btnComprobante");
 
+// Botón descargar consolidado
+const btnDescargar = document.getElementById("btnDescargar");
+
 // Número actualmente seleccionado en el panel
 let numeroSeleccionado = null;
 
@@ -306,7 +333,7 @@ numerosRef.on("value", (snapshot) => {
 
         const estadoTexto = pagado
             ? "PAGADO"
-            : (enVerificacion ? "EN VERIFICACIÓN" : "NO PAGADO");
+            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
 
         let extra = "";
         if (info.comprobante) {
@@ -382,7 +409,7 @@ function actualizarPanel(num) {
 
     const estadoTexto = pagado
         ? "PAGADO"
-        : (enVerificacion ? "EN VERIFICACIÓN" : "NO PAGADO");
+        : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
 
     panelEstado.textContent = estadoTexto;
     panelComprobante.textContent = info.comprobante ? info.comprobante : "-";
@@ -456,6 +483,40 @@ btnComprobante.onclick = () => {
     refNum.update(actualiza);
     estadoActual[numeroSeleccionado] = { ...actual, ...actualiza };
     actualizarPanel(numeroSeleccionado);
+};
+
+// --- Descargar consolidado en CSV ---
+btnDescargar.onclick = () => {
+    const filas = ['numero,nombre,estado,comprobante'];
+
+    for (let i = 0; i < 100; i++) {
+        const num = i.toString().padStart(2, "0");
+        const info = estadoActual[num];
+        if (!info) continue; // solo números seleccionados
+
+        const enVerificacion = !!info.enVerificacion;
+        const pagado = !!info.paid;
+        const estado = pagado
+            ? "PAGADO"
+            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
+
+        const nombre = (info.name || "").replace(/"/g, '""');
+        const comp = (info.comprobante || "").replace(/"/g, '""');
+
+        filas.push(`"${num}","${nombre}","${estado}","${comp}"`);
+    }
+
+    const csv = filas.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "rifa_consolidado.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 };
 </script>
 
