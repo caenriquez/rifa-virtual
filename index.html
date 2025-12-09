@@ -655,7 +655,7 @@ btnDescargar.onclick = () => {
         const pagado = !!info.paid;
         const estado = pagado
             ? "PAGADO"
-            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO";
+            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
 
         const nombre = (info.name || "").replace(/"/g, '""');
         const comp = (info.comprobante || "").replace(/"/g, '""');
