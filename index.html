@@ -226,17 +226,16 @@
     </div>
 </div>
 
-<!-- SDK de Firebase (modo compat para que sea sencillo sin módulos) -->
+<!-- SDK de Firebase (modo compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <script>
 // 🔐 Contraseña de administrador
 const ADMIN_PASSWORD = "1030";
-// Modo admin "activo" en esta sesión del navegador
 let esAdmin = false;
 
-// Configuración REAL de tu proyecto Firebase
+// Configuración Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC7-pRwzbLgQGkJq1EnO9AcFHPIYKv-1WQ",
   authDomain: "rifa-virtual-af611.firebaseapp.com",
@@ -248,15 +247,13 @@ const firebaseConfig = {
   measurementId: "G-YXTFSTNZNR"
 };
 
-// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 const grid = document.getElementById("grid");
-const estadoActual = {};          // aquí guardamos lo que viene de Firebase
-const numDivs = {};               // referencia a cada div por número
+const estadoActual = {};
+const numDivs = {};
 
-// Referencias a contadores
 const selCountSpan = document.getElementById("selCount");
 const freeCountSpan = document.getElementById("freeCount");
 
@@ -272,47 +269,33 @@ const btnPagado = document.getElementById("btnPagado");
 const btnNombre = document.getElementById("btnNombre");
 const btnComprobante = document.getElementById("btnComprobante");
 const btnRecibo = document.getElementById("btnRecibo");
-
-// Botón descargar consolidado
 const btnDescargar = document.getElementById("btnDescargar");
 
-// Número actualmente seleccionado en el panel
 let numeroSeleccionado = null;
 
-// Crear los 100 números 00–99
+// Crear 00–99
 for (let i = 0; i < 100; i++) {
     let num = i.toString().padStart(2, "0");
     let div = document.createElement("div");
     div.textContent = num;
     div.classList.add("num");
     numDivs[num] = div;
-
-    div.onclick = () => {
-        manejarClickNumero(num);
-    };
-
+    div.onclick = () => manejarClickNumero(num);
     grid.appendChild(div);
 }
 
-// Referencia a la colección "numeros" en Realtime Database
 const numerosRef = db.ref("numeros");
 
-// Escuchar cambios en tiempo real
 numerosRef.on("value", (snapshot) => {
     const data = snapshot.val() || {};
 
-    // Limpiar mapa local
-    for (const k in estadoActual) {
-        delete estadoActual[k];
-    }
+    for (const k in estadoActual) delete estadoActual[k];
 
-    // Actualizar contadores
     const seleccionados = Object.keys(data).length;
     const libres = 100 - seleccionados;
     selCountSpan.textContent = seleccionados;
     freeCountSpan.textContent = libres;
 
-    // Limpiar todos los cuadros a "disponibles"
     for (let i = 0; i < 100; i++) {
         let n = i.toString().padStart(2, "0");
         let div = numDivs[n];
@@ -320,7 +303,6 @@ numerosRef.on("value", (snapshot) => {
         div.title = "";
     }
 
-    // Guardar y aplicar estados desde Firebase
     Object.keys(data).forEach(num => {
         estadoActual[num] = data[num];
         const info = data[num];
@@ -345,33 +327,21 @@ numerosRef.on("value", (snapshot) => {
             : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
 
         let extra = "";
-        if (info.comprobante) {
-            extra = " | Comprobante: " + info.comprobante;
-        }
+        if (info.comprobante) extra = " | Comprobante: " + info.comprobante;
 
         div.title = `#${num} - ${info.name} - ${estadoTexto}${extra}`;
     });
 
-    // Si hay un número seleccionado, refrescar el panel
-    if (numeroSeleccionado !== null) {
-        actualizarPanel(numeroSeleccionado);
-    }
+    if (numeroSeleccionado !== null) actualizarPanel(numeroSeleccionado);
 });
 
-// Función para pedir contraseña de administrador
 function solicitarPasswordAdmin() {
-    // Si ya se validó antes, no volvemos a pedirla
     if (esAdmin) return true;
-
     const intento = prompt("Ingrese la contraseña de administrador:");
-    if (intento === null) return false; // Cancelar
-
+    if (intento === null) return false;
     if (intento === ADMIN_PASSWORD) {
         esAdmin = true;
-        // Mostrar el botón de descargar consolidado una vez validado
-        if (btnDescargar) {
-            btnDescargar.style.display = "inline-block";
-        }
+        btnDescargar.style.display = "inline-block";
         return true;
     } else {
         alert("Contraseña incorrecta. No se realizaron cambios.");
@@ -379,42 +349,32 @@ function solicitarPasswordAdmin() {
     }
 }
 
-// Manejar clic sobre un número
 function manejarClickNumero(num) {
-    // Siempre pedir (o validar) contraseña para acceder
-    if (!solicitarPasswordAdmin()) {
-        return;
-    }
+    if (!solicitarPasswordAdmin()) return;
 
     const refNum = db.ref("numeros/" + num);
     const actual = estadoActual[num] || null;
 
-    // Si el número está libre: registrar nuevo nombre
     if (!actual) {
         let name = prompt(`Ingresa el nombre para el número ${num}:`);
         if (!name) return;
-
         const data = {
             name: name,
             paid: false,
             comprobante: null,
             enVerificacion: false
         };
-
         refNum.set(data);
         estadoActual[num] = data;
     }
 
-    // Mostrar / actualizar panel para este número
     numeroSeleccionado = num;
     actualizarPanel(num);
     adminPanel.style.display = "block";
 }
 
-// Actualizar la información mostrada en el panel
 function actualizarPanel(num) {
     const info = estadoActual[num] || null;
-
     panelNum.textContent = num;
 
     if (!info) {
@@ -428,17 +388,15 @@ function actualizarPanel(num) {
 
     const enVerificacion = !!info.enVerificacion;
     const pagado = !!info.paid;
-
     const estadoTexto = pagado
         ? "PAGADO"
         : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
 
     panelEstado.textContent = estadoTexto;
-    panelComprobante.textContent = info.comprobante ? info.comprobante : "-";
+    panelComprobante.textContent = info.comprobante || "-";
 }
 
-// --- Acciones de los botones del panel ---
-
+// Botones panel
 btnLiberar.onclick = () => {
     if (numeroSeleccionado === null) return;
     if (!esAdmin && !solicitarPasswordAdmin()) return;
@@ -460,9 +418,8 @@ btnPagado.onclick = () => {
     const refNum = db.ref("numeros/" + numeroSeleccionado);
     const nuevoPagado = !actual.paid;
     const actualiza = { paid: nuevoPagado };
-    if (nuevoPagado) {
-        actualiza.enVerificacion = false;
-    }
+    if (nuevoPagado) actualiza.enVerificacion = false;
+
     refNum.update(actualiza);
     estadoActual[numeroSeleccionado] = { ...actual, ...actualiza };
     actualizarPanel(numeroSeleccionado);
@@ -497,10 +454,7 @@ btnComprobante.onclick = () => {
         textoActual
     );
 
-    if (nuevoTexto === null) {
-        return; // cancelado
-    }
-
+    if (nuevoTexto === null) return;
     nuevoTexto = nuevoTexto.trim();
     const hayComprobante = nuevoTexto.length > 0;
 
@@ -515,7 +469,7 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// --- Descargar recibo individual en JPG (solo si está PAGADO) ---
+// --- Recibo en JPG minimalista ---
 btnRecibo.onclick = () => {
     if (numeroSeleccionado === null) {
         alert("Primero selecciona un número en el panel.");
@@ -538,20 +492,19 @@ btnRecibo.onclick = () => {
     const comprobante = info.comprobante || "N/A";
     const fecha = new Date().toLocaleString("es-CO");
 
-    // Crear canvas del recibo
     const canvas = document.createElement("canvas");
     canvas.width = 700;
-    canvas.height = 1100;
+    canvas.height = 900;
     const ctx = canvas.getContext("2d");
 
-    // Fondo degradado suave
+    // Fondo suave
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, "#e3f2fd");   // azul muy claro
+    grad.addColorStop(0, "#e3f2fd");
     grad.addColorStop(1, "#ffffff");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Ticket blanco
+    // Ticket
     const marginX = 80;
     const marginY = 80;
     const ticketWidth = canvas.width - marginX * 2;
@@ -560,8 +513,6 @@ btnRecibo.onclick = () => {
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = "#cfd8dc";
     ctx.lineWidth = 2;
-
-    // Borde con esquinas un poco redondeadas
     const r = 20;
     ctx.beginPath();
     ctx.moveTo(marginX + r, marginY);
@@ -577,7 +528,7 @@ btnRecibo.onclick = () => {
     ctx.fill();
     ctx.stroke();
 
-    // "dientes" superiores del ticket
+    // Dientes arriba
     ctx.save();
     ctx.beginPath();
     const topY = marginY;
@@ -593,22 +544,15 @@ btnRecibo.onclick = () => {
     ctx.stroke();
     ctx.restore();
 
-    // Texto dentro del ticket
-    let y = marginY + 45;
+    // Título
+    let y = marginY + 60;
     ctx.fillStyle = "#263238";
     ctx.textAlign = "center";
-    ctx.font = "bold 26px Arial";
+    ctx.font = "bold 28px Arial";
     ctx.fillText("RECIBO DE RIFA", canvas.width / 2, y);
 
-    y += 30;
-    ctx.font = "14px Arial";
-    ctx.fillStyle = "#455a64";
-    ctx.fillText("Sensacional Rifa de $1.000.000 de pesos", canvas.width / 2, y);
-    y += 20;
-    ctx.fillText("Juega el 20 de diciembre de 2025 – Valor del número: $20.000", canvas.width / 2, y);
-
-    // Línea separadora
-    y += 30;
+    // Línea
+    y += 25;
     ctx.strokeStyle = "#eceff1";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -616,96 +560,74 @@ btnRecibo.onclick = () => {
     ctx.lineTo(marginX + ticketWidth - 25, y);
     ctx.stroke();
 
-    // Info principal
-    y += 30;
+    // Campos
+    y += 35;
     ctx.textAlign = "left";
     ctx.fillStyle = "#263238";
     ctx.font = "bold 16px Arial";
-    ctx.fillText("Fecha:", marginX + 40, y);
-    ctx.font = "14px Arial";
-    ctx.fillText(fecha, marginX + 130, y);
+    const labelX = marginX + 40;
+    const valueX = marginX + 190;
 
-    y += 25;
+    ctx.fillText("Fecha:", labelX, y);
+    ctx.font = "14px Arial";
+    ctx.fillText(fecha, valueX, y);
+
+    y += 28;
     ctx.font = "bold 16px Arial";
-    ctx.fillText("Número:", marginX + 40, y);
+    ctx.fillText("Número:", labelX, y);
     ctx.font = "bold 20px Arial";
     ctx.fillStyle = "#1e88e5";
-    ctx.fillText(num, marginX + 140, y);
+    ctx.fillText(num, valueX, y);
 
-    y += 28;
+    y += 30;
     ctx.font = "bold 16px Arial";
     ctx.fillStyle = "#263238";
-    ctx.fillText("Nombre:", marginX + 40, y);
+    ctx.fillText("Nombre:", labelX, y);
     ctx.font = "14px Arial";
-    ctx.fillText(nombre, marginX + 140, y);
+    ctx.fillText(nombre, valueX, y);
 
-    y += 28;
+    y += 30;
     ctx.font = "bold 16px Arial";
-    ctx.fillText("Estado:", marginX + 40, y);
+    ctx.fillText("Estado:", labelX, y);
     ctx.font = "bold 16px Arial";
     ctx.fillStyle = "#2e7d32";
-    ctx.fillText("PAGADO", marginX + 130, y);
+    ctx.fillText("PAGADO", valueX, y);
 
-    y += 28;
+    y += 30;
     ctx.font = "bold 16px Arial";
     ctx.fillStyle = "#263238";
-    ctx.fillText("Comprobante:", marginX + 40, y);
+    ctx.fillText("Comprobante:", labelX, y);
     ctx.font = "14px Arial";
-    ctx.fillText(comprobante, marginX + 180, y);
+    ctx.fillText(comprobante, valueX, y);
 
-    // Otra línea separadora
     y += 30;
     ctx.strokeStyle = "#eceff1";
-    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(marginX + 25, y);
     ctx.lineTo(marginX + ticketWidth - 25, y);
     ctx.stroke();
 
-    // Info de premio
-    y += 30;
+    y += 35;
     ctx.font = "bold 16px Arial";
     ctx.fillStyle = "#263238";
-    ctx.fillText("Premio:", marginX + 40, y);
+    ctx.fillText("Premio:", labelX, y);
     ctx.font = "14px Arial";
-    ctx.fillText("$1.000.000", marginX + 130, y);
+    ctx.fillText("$1.000.000", valueX, y);
 
-    y += 25;
+    y += 28;
     ctx.font = "bold 16px Arial";
-    ctx.fillText("Valor del número:", marginX + 40, y);
+    ctx.fillText("Valor del número:", labelX, y);
     ctx.font = "14px Arial";
-    ctx.fillText("$20.000", marginX + 210, y);
+    ctx.fillText("$20.000", valueX, y);
 
-    y += 45;
+    // Mensaje final
+    y += 60;
     ctx.textAlign = "center";
-    ctx.font = "italic 13px Arial";
-    ctx.fillStyle = "#607d8b";
-    ctx.fillText("Gracias por participar en la rifa", canvas.width / 2, y);
-
-    // "Código de barras" decorativo
-    y += 40;
-    const barXStart = marginX + 40;
-    const barXEnd = marginX + ticketWidth - 40;
-    const barWidth = barXEnd - barXStart;
-    const barHeight = 60;
-    ctx.fillStyle = "#eceff1";
-    ctx.fillRect(barXStart, y, barWidth, barHeight);
-
+    ctx.font = "italic 15px Arial";
     ctx.fillStyle = "#455a64";
-    for (let x = barXStart + 10; x < barXEnd - 10; x += 6) {
-        const w = Math.random() * 3 + 1;
-        const h = Math.random() * (barHeight - 15) + 15;
-        ctx.fillRect(x, y + (barHeight - h), w, h);
-    }
+    ctx.fillText("Gracias por participar, buena suerte", canvas.width / 2, y);
 
-    // Texto al final
-    y += barHeight + 30;
-    ctx.textAlign = "center";
-    ctx.font = "bold 14px Arial";
-    ctx.fillStyle = "#263238";
-    ctx.fillText("Organiza: Cristian / Nequi 3116403643", canvas.width / 2, y);
-
-    // Descargar como JPG
+    // Descargar JPG
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/jpeg", 0.95);
     link.download = "recibo_rifa_" + num + ".jpg";
@@ -714,18 +636,16 @@ btnRecibo.onclick = () => {
     document.body.removeChild(link);
 };
 
-// --- Descargar consolidado en CSV (solo visible tras contraseña correcta) ---
+// CSV consolidado
 btnDescargar.onclick = () => {
-    if (!esAdmin && !solicitarPasswordAdmin()) {
-        return;
-    }
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
 
     const filas = ['numero,nombre,estado,comprobante'];
 
     for (let i = 0; i < 100; i++) {
         const num = i.toString().padStart(2, "0");
         const info = estadoActual[num];
-        if (!info) continue; // solo números seleccionados
+        if (!info) continue;
 
         const enVerificacion = !!info.enVerificacion;
         const pagado = !!info.paid;
