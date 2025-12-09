@@ -156,19 +156,23 @@
         background: #2196f3;
         color: #fff;
     }
+    .btn-recibo {
+        background: #9c27b0;
+        color: #fff;
+    }
 </style>
 </head>
 <body>
 
 <h1>Sensacional Rifa de $1.000.000 de pesos</h1>
-<h2>Juega el 20 de diciembre de 2025, con la loteria de Boyaca – Valor del número: $20.000 pesos</h2>
+<h2>Juega el 20 de diciembre de 2025 – Valor del número: $20.000 pesos</h2>
 <div class="info-pago">
     Se puede pagar por transferencia a Nequi: <strong>3116403643</strong>
 </div>
 
 <p style="margin-top:18px;">
     Solo el administrador puede registrar y gestionar los números.<br>
-    Al seleccionar un número o descargar el consolidado se pedirá la contraseña.
+    Al seleccionar un número se pedirá la contraseña.
 </p>
 
 <div class="legend">
@@ -191,7 +195,8 @@
     Números libres: <strong id="freeCount">100</strong>
 </div>
 
-<button id="btnDescargar" class="download-btn">
+<!-- Botón de consolidado (oculto hasta que se valide la contraseña 1030) -->
+<button id="btnDescargar" class="download-btn" style="display:none;">
     Descargar consolidado (CSV)
 </button>
 
@@ -217,16 +222,21 @@
         <button class="admin-btn btn-pagado" id="btnPagado">Marcar / desmarcar pagado</button>
         <button class="admin-btn btn-nombre" id="btnNombre">Cambiar nombre</button>
         <button class="admin-btn btn-comprobante" id="btnComprobante">Gestionar comprobante</button>
+        <button class="admin-btn btn-recibo" id="btnRecibo">Descargar recibo</button>
     </div>
 </div>
 
 <!-- SDK de Firebase (modo compat para que sea sencillo sin módulos) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<!-- jsPDF para generar el PDF del recibo -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 // 🔐 Contraseña de administrador
 const ADMIN_PASSWORD = "1030";
+// Modo admin "activo" en esta sesión del navegador
+let esAdmin = false;
 
 // Configuración REAL de tu proyecto Firebase
 const firebaseConfig = {
@@ -263,6 +273,7 @@ const btnLiberar = document.getElementById("btnLiberar");
 const btnPagado = document.getElementById("btnPagado");
 const btnNombre = document.getElementById("btnNombre");
 const btnComprobante = document.getElementById("btnComprobante");
+const btnRecibo = document.getElementById("btnRecibo");
 
 // Botón descargar consolidado
 const btnDescargar = document.getElementById("btnDescargar");
@@ -351,16 +362,29 @@ numerosRef.on("value", (snapshot) => {
 
 // Función para pedir contraseña de administrador
 function solicitarPasswordAdmin() {
+    // Si ya se validó antes, no volvemos a pedirla
+    if (esAdmin) return true;
+
     const intento = prompt("Ingrese la contraseña de administrador:");
     if (intento === null) return false; // Cancelar
-    return intento === ADMIN_PASSWORD;
+
+    if (intento === ADMIN_PASSWORD) {
+        esAdmin = true;
+        // Mostrar el botón de descargar consolidado una vez validado
+        if (btnDescargar) {
+            btnDescargar.style.display = "inline-block";
+        }
+        return true;
+    } else {
+        alert("Contraseña incorrecta. No se realizaron cambios.");
+        return false;
+    }
 }
 
 // Manejar clic sobre un número
 function manejarClickNumero(num) {
-    // Siempre pedir contraseña para acceder
+    // Siempre pedir (o validar) contraseña para acceder
     if (!solicitarPasswordAdmin()) {
-        alert("Contraseña incorrecta. No se realizaron cambios.");
         return;
     }
 
@@ -419,6 +443,8 @@ function actualizarPanel(num) {
 
 btnLiberar.onclick = () => {
     if (numeroSeleccionado === null) return;
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
+
     const refNum = db.ref("numeros/" + numeroSeleccionado);
     refNum.remove();
     delete estadoActual[numeroSeleccionado];
@@ -428,6 +454,8 @@ btnLiberar.onclick = () => {
 
 btnPagado.onclick = () => {
     if (numeroSeleccionado === null) return;
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
+
     const actual = estadoActual[numeroSeleccionado];
     if (!actual) return;
 
@@ -444,6 +472,8 @@ btnPagado.onclick = () => {
 
 btnNombre.onclick = () => {
     if (numeroSeleccionado === null) return;
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
+
     const actual = estadoActual[numeroSeleccionado];
     if (!actual) return;
 
@@ -458,6 +488,8 @@ btnNombre.onclick = () => {
 
 btnComprobante.onclick = () => {
     if (numeroSeleccionado === null) return;
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
+
     const actual = estadoActual[numeroSeleccionado];
     if (!actual) return;
 
@@ -485,10 +517,56 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// --- Descargar consolidado en CSV (solo admin) ---
+// --- Descargar recibo individual en PDF (solo si está PAGADO) ---
+btnRecibo.onclick = () => {
+    if (numeroSeleccionado === null) {
+        alert("Primero selecciona un número en el panel.");
+        return;
+    }
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
+
+    const info = estadoActual[numeroSeleccionado];
+    if (!info) {
+        alert("El número seleccionado está libre, no hay datos para recibo.");
+        return;
+    }
+    if (!info.paid) {
+        alert("Solo se puede descargar recibo si el número está en estado PAGADO.");
+        return;
+    }
+
+    const num = numeroSeleccionado;
+    const nombre = info.name || "";
+    const comprobante = info.comprobante || "N/A";
+    const fecha = new Date().toLocaleString("es-CO");
+
+    // Usar jsPDF (UMD)
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(16);
+    doc.text("RECIBO DE RIFA", 105, 20, { align: "center" });
+
+    doc.setFontSize(11);
+    let y = 35;
+    doc.text("Fecha: " + fecha, 20, y); y += 8;
+    doc.text("Número: " + num, 20, y); y += 8;
+    doc.text("Nombre: " + nombre, 20, y); y += 8;
+    doc.text("Estado: PAGADO", 20, y); y += 8;
+    doc.text("Comprobante: " + comprobante, 20, y); y += 10;
+
+    doc.text("Premio: $1.000.000", 20, y); y += 8;
+    doc.text("Valor del número: $20.000", 20, y); y += 12;
+
+    doc.text("Gracias por participar en la rifa.", 20, y);
+
+    doc.save("recibo_rifa_" + num + ".pdf");
+};
+
+// --- Descargar consolidado en CSV (solo visible tras contraseña correcta) ---
 btnDescargar.onclick = () => {
-    if (!solicitarPasswordAdmin()) {
-        alert("Contraseña incorrecta. No se descargará el consolidado.");
+    if (!esAdmin && !solicitarPasswordAdmin()) {
         return;
     }
 
@@ -527,4 +605,3 @@ btnDescargar.onclick = () => {
 
 </body>
 </html>
-
