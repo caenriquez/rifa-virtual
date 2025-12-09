@@ -229,8 +229,6 @@
 <!-- SDK de Firebase (modo compat para que sea sencillo sin módulos) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-<!-- jsPDF para generar el PDF del recibo -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 // 🔐 Contraseña de administrador
@@ -517,7 +515,7 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// --- Descargar recibo individual en PDF (solo si está PAGADO) ---
+// --- Descargar recibo individual en JPG (solo si está PAGADO) ---
 btnRecibo.onclick = () => {
     if (numeroSeleccionado === null) {
         alert("Primero selecciona un número en el panel.");
@@ -540,28 +538,180 @@ btnRecibo.onclick = () => {
     const comprobante = info.comprobante || "N/A";
     const fecha = new Date().toLocaleString("es-CO");
 
-    // Usar jsPDF (UMD)
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    // Crear canvas del recibo
+    const canvas = document.createElement("canvas");
+    canvas.width = 700;
+    canvas.height = 1100;
+    const ctx = canvas.getContext("2d");
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(16);
-    doc.text("RECIBO DE RIFA", 105, 20, { align: "center" });
+    // Fondo degradado suave
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#e3f2fd");   // azul muy claro
+    grad.addColorStop(1, "#ffffff");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    doc.setFontSize(11);
-    let y = 35;
-    doc.text("Fecha: " + fecha, 20, y); y += 8;
-    doc.text("Número: " + num, 20, y); y += 8;
-    doc.text("Nombre: " + nombre, 20, y); y += 8;
-    doc.text("Estado: PAGADO", 20, y); y += 8;
-    doc.text("Comprobante: " + comprobante, 20, y); y += 10;
+    // Ticket blanco
+    const marginX = 80;
+    const marginY = 80;
+    const ticketWidth = canvas.width - marginX * 2;
+    const ticketHeight = canvas.height - marginY * 2;
 
-    doc.text("Premio: $1.000.000", 20, y); y += 8;
-    doc.text("Valor del número: $20.000", 20, y); y += 12;
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#cfd8dc";
+    ctx.lineWidth = 2;
 
-    doc.text("Gracias por participar en la rifa.", 20, y);
+    // Borde con esquinas un poco redondeadas
+    const r = 20;
+    ctx.beginPath();
+    ctx.moveTo(marginX + r, marginY);
+    ctx.lineTo(marginX + ticketWidth - r, marginY);
+    ctx.quadraticCurveTo(marginX + ticketWidth, marginY, marginX + ticketWidth, marginY + r);
+    ctx.lineTo(marginX + ticketWidth, marginY + ticketHeight - r);
+    ctx.quadraticCurveTo(marginX + ticketWidth, marginY + ticketHeight, marginX + ticketWidth - r, marginY + ticketHeight);
+    ctx.lineTo(marginX + r, marginY + ticketHeight);
+    ctx.quadraticCurveTo(marginX, marginY + ticketHeight, marginX, marginY + ticketHeight - r);
+    ctx.lineTo(marginX, marginY + r);
+    ctx.quadraticCurveTo(marginX, marginY, marginX + r, marginY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
-    doc.save("recibo_rifa_" + num + ".pdf");
+    // "dientes" superiores del ticket
+    ctx.save();
+    ctx.beginPath();
+    const topY = marginY;
+    const toothW = 18;
+    const toothH = 10;
+    for (let x = marginX; x < marginX + ticketWidth; x += toothW) {
+        ctx.moveTo(x, topY);
+        ctx.lineTo(x + toothW / 2, topY - toothH);
+        ctx.lineTo(x + toothW, topY);
+    }
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.stroke();
+    ctx.restore();
+
+    // Texto dentro del ticket
+    let y = marginY + 45;
+    ctx.fillStyle = "#263238";
+    ctx.textAlign = "center";
+    ctx.font = "bold 26px Arial";
+    ctx.fillText("RECIBO DE RIFA", canvas.width / 2, y);
+
+    y += 30;
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "#455a64";
+    ctx.fillText("Sensacional Rifa de $1.000.000 de pesos", canvas.width / 2, y);
+    y += 20;
+    ctx.fillText("Juega el 20 de diciembre de 2025 – Valor del número: $20.000", canvas.width / 2, y);
+
+    // Línea separadora
+    y += 30;
+    ctx.strokeStyle = "#eceff1";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(marginX + 25, y);
+    ctx.lineTo(marginX + ticketWidth - 25, y);
+    ctx.stroke();
+
+    // Info principal
+    y += 30;
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#263238";
+    ctx.font = "bold 16px Arial";
+    ctx.fillText("Fecha:", marginX + 40, y);
+    ctx.font = "14px Arial";
+    ctx.fillText(fecha, marginX + 130, y);
+
+    y += 25;
+    ctx.font = "bold 16px Arial";
+    ctx.fillText("Número:", marginX + 40, y);
+    ctx.font = "bold 20px Arial";
+    ctx.fillStyle = "#1e88e5";
+    ctx.fillText(num, marginX + 140, y);
+
+    y += 28;
+    ctx.font = "bold 16px Arial";
+    ctx.fillStyle = "#263238";
+    ctx.fillText("Nombre:", marginX + 40, y);
+    ctx.font = "14px Arial";
+    ctx.fillText(nombre, marginX + 140, y);
+
+    y += 28;
+    ctx.font = "bold 16px Arial";
+    ctx.fillText("Estado:", marginX + 40, y);
+    ctx.font = "bold 16px Arial";
+    ctx.fillStyle = "#2e7d32";
+    ctx.fillText("PAGADO", marginX + 130, y);
+
+    y += 28;
+    ctx.font = "bold 16px Arial";
+    ctx.fillStyle = "#263238";
+    ctx.fillText("Comprobante:", marginX + 40, y);
+    ctx.font = "14px Arial";
+    ctx.fillText(comprobante, marginX + 180, y);
+
+    // Otra línea separadora
+    y += 30;
+    ctx.strokeStyle = "#eceff1";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(marginX + 25, y);
+    ctx.lineTo(marginX + ticketWidth - 25, y);
+    ctx.stroke();
+
+    // Info de premio
+    y += 30;
+    ctx.font = "bold 16px Arial";
+    ctx.fillStyle = "#263238";
+    ctx.fillText("Premio:", marginX + 40, y);
+    ctx.font = "14px Arial";
+    ctx.fillText("$1.000.000", marginX + 130, y);
+
+    y += 25;
+    ctx.font = "bold 16px Arial";
+    ctx.fillText("Valor del número:", marginX + 40, y);
+    ctx.font = "14px Arial";
+    ctx.fillText("$20.000", marginX + 210, y);
+
+    y += 45;
+    ctx.textAlign = "center";
+    ctx.font = "italic 13px Arial";
+    ctx.fillStyle = "#607d8b";
+    ctx.fillText("Gracias por participar en la rifa", canvas.width / 2, y);
+
+    // "Código de barras" decorativo
+    y += 40;
+    const barXStart = marginX + 40;
+    const barXEnd = marginX + ticketWidth - 40;
+    const barWidth = barXEnd - barXStart;
+    const barHeight = 60;
+    ctx.fillStyle = "#eceff1";
+    ctx.fillRect(barXStart, y, barWidth, barHeight);
+
+    ctx.fillStyle = "#455a64";
+    for (let x = barXStart + 10; x < barXEnd - 10; x += 6) {
+        const w = Math.random() * 3 + 1;
+        const h = Math.random() * (barHeight - 15) + 15;
+        ctx.fillRect(x, y + (barHeight - h), w, h);
+    }
+
+    // Texto al final
+    y += barHeight + 30;
+    ctx.textAlign = "center";
+    ctx.font = "bold 14px Arial";
+    ctx.fillStyle = "#263238";
+    ctx.fillText("Organiza: Cristian / Nequi 3116403643", canvas.width / 2, y);
+
+    // Descargar como JPG
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/jpeg", 0.95);
+    link.download = "recibo_rifa_" + num + ".jpg";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 };
 
 // --- Descargar consolidado en CSV (solo visible tras contraseña correcta) ---
