@@ -77,7 +77,6 @@
         user-select: none;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 
-        /* centrado perfecto */
         display: flex;
         align-items: center;
         justify-content: center;
@@ -88,21 +87,20 @@
     }
 
     .reservado {
-        background: #ffd54f !important; /* amarillo */
+        background: #ffd54f !important;
         border-color: #ffb300 !important;
     }
     .verificacion {
-        background: #64b5f6 !important; /* azul */
+        background: #64b5f6 !important;
         border-color: #1976d2 !important;
         color: #fff !important;
     }
     .pagado {
-        background: #4caf50 !important; /* verde */
+        background: #4caf50 !important;
         color: white !important;
         border-color: #2e7d32 !important;
     }
 
-    /* Panel administrador */
     .admin-panel {
         margin-top: 25px;
         padding: 15px;
@@ -120,12 +118,8 @@
         margin-top: 0;
         text-align: center;
     }
-    .admin-row {
-        margin: 4px 0;
-    }
-    .admin-label {
-        font-weight: bold;
-    }
+    .admin-row { margin: 4px 0; }
+    .admin-label { font-weight: bold; }
     .admin-buttons {
         margin-top: 10px;
         display: flex;
@@ -140,26 +134,11 @@
         cursor: pointer;
         font-size: 13px;
     }
-    .btn-liberar {
-        background: #f44336;
-        color: #fff;
-    }
-    .btn-pagado {
-        background: #4caf50;
-        color: #fff;
-    }
-    .btn-nombre {
-        background: #ff9800;
-        color: #fff;
-    }
-    .btn-comprobante {
-        background: #2196f3;
-        color: #fff;
-    }
-    .btn-recibo {
-        background: #9c27b0;
-        color: #fff;
-    }
+    .btn-liberar   { background: #f44336; color:#fff; }
+    .btn-pagado    { background: #4caf50; color:#fff; }
+    .btn-nombre    { background: #ff9800; color:#fff; }
+    .btn-comprobante { background:#2196f3; color:#fff; }
+    .btn-recibo    { background: #9c27b0; color:#fff; }
 </style>
 </head>
 <body>
@@ -195,14 +174,12 @@
     Números libres: <strong id="freeCount">100</strong>
 </div>
 
-<!-- Botón de consolidado (oculto hasta que se valide la contraseña 1030) -->
 <button id="btnDescargar" class="download-btn" style="display:none;">
     Descargar consolidado (CSV)
 </button>
 
 <div class="grid" id="grid"></div>
 
-<!-- Panel de administración -->
 <div id="adminPanel" class="admin-panel" style="display:none;">
     <h3>Panel de administración</h3>
     <div class="admin-row">
@@ -226,16 +203,14 @@
     </div>
 </div>
 
-<!-- SDK de Firebase (modo compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
 <script>
-// 🔐 Contraseña de administrador
+// ====================== CONFIGURACIÓN ======================
 const ADMIN_PASSWORD = "1030";
 let esAdmin = false;
 
-// Configuración Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyC7-pRwzbLgQGkJq1EnO9AcFHPIYKv-1WQ",
   authDomain: "rifa-virtual-af611.firebaseapp.com",
@@ -257,7 +232,6 @@ const numDivs = {};
 const selCountSpan = document.getElementById("selCount");
 const freeCountSpan = document.getElementById("freeCount");
 
-// Panel admin
 const adminPanel = document.getElementById("adminPanel");
 const panelNum = document.getElementById("panelNum");
 const panelNombre = document.getElementById("panelNombre");
@@ -273,7 +247,7 @@ const btnDescargar = document.getElementById("btnDescargar");
 
 let numeroSeleccionado = null;
 
-// Crear 00–99
+// ====================== CREAR GRID 00–99 ======================
 for (let i = 0; i < 100; i++) {
     let num = i.toString().padStart(2, "0");
     let div = document.createElement("div");
@@ -284,6 +258,7 @@ for (let i = 0; i < 100; i++) {
     grid.appendChild(div);
 }
 
+// ====================== SINCRONIZAR CON FIREBASE ======================
 const numerosRef = db.ref("numeros");
 
 numerosRef.on("value", (snapshot) => {
@@ -335,6 +310,7 @@ numerosRef.on("value", (snapshot) => {
     if (numeroSeleccionado !== null) actualizarPanel(numeroSeleccionado);
 });
 
+// ====================== LÓGICA ADMIN ======================
 function solicitarPasswordAdmin() {
     if (esAdmin) return true;
     const intento = prompt("Ingrese la contraseña de administrador:");
@@ -396,7 +372,6 @@ function actualizarPanel(num) {
     panelComprobante.textContent = info.comprobante || "-";
 }
 
-// Botones panel
 btnLiberar.onclick = () => {
     if (numeroSeleccionado === null) return;
     if (!esAdmin && !solicitarPasswordAdmin()) return;
@@ -469,7 +444,7 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// --- Recibo en JPG tipo tiquete pequeño ---
+// ====================== RECIBO JPG TIPO TIQUETE ======================
 btnRecibo.onclick = () => {
     if (numeroSeleccionado === null) {
         alert("Primero selecciona un número en el panel.");
@@ -492,20 +467,17 @@ btnRecibo.onclick = () => {
     const comprobante = info.comprobante || "N/A";
     const fecha = new Date().toLocaleString("es-CO");
 
-    // Canvas tipo tique
     const canvas = document.createElement("canvas");
-    canvas.width = 420;   // ancho reducido
-    canvas.height = 720;  // alto reducido
+    canvas.width = 420;
+    canvas.height = 720;
     const ctx = canvas.getContext("2d");
 
-    // Fondo suave
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
     grad.addColorStop(0, "#e3f2fd");
     grad.addColorStop(1, "#ffffff");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Ticket blanco
     const marginX = 30;
     const marginY = 30;
     const ticketWidth = canvas.width - marginX * 2;
@@ -530,7 +502,6 @@ btnRecibo.onclick = () => {
     ctx.fill();
     ctx.stroke();
 
-    // "Dientes" arriba
     ctx.save();
     ctx.beginPath();
     const topY = marginY;
@@ -546,14 +517,12 @@ btnRecibo.onclick = () => {
     ctx.stroke();
     ctx.restore();
 
-    // Título
     let y = marginY + 45;
     ctx.fillStyle = "#263238";
     ctx.textAlign = "center";
     ctx.font = "bold 22px Arial";
     ctx.fillText("RECIBO DE RIFA", canvas.width / 2, y);
 
-    // Línea
     y += 18;
     ctx.strokeStyle = "#eceff1";
     ctx.lineWidth = 1;
@@ -562,7 +531,6 @@ btnRecibo.onclick = () => {
     ctx.lineTo(marginX + ticketWidth - 15, y);
     ctx.stroke();
 
-    // Campos
     y += 28;
     ctx.textAlign = "left";
     ctx.fillStyle = "#263238";
@@ -602,7 +570,6 @@ btnRecibo.onclick = () => {
     ctx.font = "12px Arial";
     ctx.fillText(comprobante, valueX, y);
 
-    // Separador
     y += 26;
     ctx.strokeStyle = "#eceff1";
     ctx.beginPath();
@@ -610,7 +577,6 @@ btnRecibo.onclick = () => {
     ctx.lineTo(marginX + ticketWidth - 15, y);
     ctx.stroke();
 
-    // Premio y valor
     y += 26;
     ctx.font = "bold 14px Arial";
     ctx.fillStyle = "#263238";
@@ -624,14 +590,12 @@ btnRecibo.onclick = () => {
     ctx.font = "12px Arial";
     ctx.fillText("$20.000", valueX, y);
 
-    // Mensaje final
     y += 50;
     ctx.textAlign = "center";
     ctx.font = "italic 13px Arial";
     ctx.fillStyle = "#455a64";
     ctx.fillText("Gracias por participar, buena suerte", canvas.width / 2, y);
 
-    // Descargar JPG
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/jpeg", 0.95);
     link.download = "recibo_rifa_" + num + ".jpg";
@@ -640,7 +604,7 @@ btnRecibo.onclick = () => {
     document.body.removeChild(link);
 };
 
-// CSV consolidado
+// ====================== CSV ======================
 btnDescargar.onclick = () => {
     if (!esAdmin && !solicitarPasswordAdmin()) return;
 
