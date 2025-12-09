@@ -165,7 +165,7 @@
 <body>
 
 <h1>Sensacional Rifa de $1.000.000 de pesos</h1>
-<h2>Juega el 20 de diciembre de 2025 – Valor del número: $20.000 pesos</h2>
+<h2>Juega el 20 de diciembre de 2025 con la Lotería de Boyacá – Valor del número: $20.000 pesos</h2>
 <div class="info-pago">
     Se puede pagar por transferencia a Nequi: <strong>3116403643</strong>
 </div>
@@ -469,7 +469,7 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// --- Recibo en JPG minimalista ---
+// --- Recibo en JPG tipo tiquete pequeño ---
 btnRecibo.onclick = () => {
     if (numeroSeleccionado === null) {
         alert("Primero selecciona un número en el panel.");
@@ -492,9 +492,10 @@ btnRecibo.onclick = () => {
     const comprobante = info.comprobante || "N/A";
     const fecha = new Date().toLocaleString("es-CO");
 
+    // Canvas tipo tique
     const canvas = document.createElement("canvas");
-    canvas.width = 700;
-    canvas.height = 900;
+    canvas.width = 420;   // ancho reducido
+    canvas.height = 720;  // alto reducido
     const ctx = canvas.getContext("2d");
 
     // Fondo suave
@@ -504,16 +505,17 @@ btnRecibo.onclick = () => {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Ticket
-    const marginX = 80;
-    const marginY = 80;
+    // Ticket blanco
+    const marginX = 30;
+    const marginY = 30;
     const ticketWidth = canvas.width - marginX * 2;
     const ticketHeight = canvas.height - marginY * 2;
 
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = "#cfd8dc";
     ctx.lineWidth = 2;
-    const r = 20;
+    const r = 16;
+
     ctx.beginPath();
     ctx.moveTo(marginX + r, marginY);
     ctx.lineTo(marginX + ticketWidth - r, marginY);
@@ -528,12 +530,12 @@ btnRecibo.onclick = () => {
     ctx.fill();
     ctx.stroke();
 
-    // Dientes arriba
+    // "Dientes" arriba
     ctx.save();
     ctx.beginPath();
     const topY = marginY;
-    const toothW = 18;
-    const toothH = 10;
+    const toothW = 14;
+    const toothH = 8;
     for (let x = marginX; x < marginX + ticketWidth; x += toothW) {
         ctx.moveTo(x, topY);
         ctx.lineTo(x + toothW / 2, topY - toothH);
@@ -545,85 +547,87 @@ btnRecibo.onclick = () => {
     ctx.restore();
 
     // Título
-    let y = marginY + 60;
+    let y = marginY + 45;
     ctx.fillStyle = "#263238";
     ctx.textAlign = "center";
-    ctx.font = "bold 28px Arial";
+    ctx.font = "bold 22px Arial";
     ctx.fillText("RECIBO DE RIFA", canvas.width / 2, y);
 
     // Línea
-    y += 25;
+    y += 18;
     ctx.strokeStyle = "#eceff1";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(marginX + 25, y);
-    ctx.lineTo(marginX + ticketWidth - 25, y);
+    ctx.moveTo(marginX + 15, y);
+    ctx.lineTo(marginX + ticketWidth - 15, y);
     ctx.stroke();
 
     // Campos
-    y += 35;
+    y += 28;
     ctx.textAlign = "left";
     ctx.fillStyle = "#263238";
-    ctx.font = "bold 16px Arial";
-    const labelX = marginX + 40;
-    const valueX = marginX + 190;
+    ctx.font = "bold 14px Arial";
+    const labelX = marginX + 20;
+    const valueX = marginX + 150;
 
     ctx.fillText("Fecha:", labelX, y);
-    ctx.font = "14px Arial";
+    ctx.font = "12px Arial";
     ctx.fillText(fecha, valueX, y);
 
-    y += 28;
-    ctx.font = "bold 16px Arial";
+    y += 24;
+    ctx.font = "bold 14px Arial";
     ctx.fillText("Número:", labelX, y);
-    ctx.font = "bold 20px Arial";
+    ctx.font = "bold 18px Arial";
     ctx.fillStyle = "#1e88e5";
     ctx.fillText(num, valueX, y);
 
-    y += 30;
-    ctx.font = "bold 16px Arial";
+    y += 24;
+    ctx.font = "bold 14px Arial";
     ctx.fillStyle = "#263238";
     ctx.fillText("Nombre:", labelX, y);
-    ctx.font = "14px Arial";
+    ctx.font = "12px Arial";
     ctx.fillText(nombre, valueX, y);
 
-    y += 30;
-    ctx.font = "bold 16px Arial";
+    y += 24;
+    ctx.font = "bold 14px Arial";
     ctx.fillText("Estado:", labelX, y);
-    ctx.font = "bold 16px Arial";
+    ctx.font = "bold 14px Arial";
     ctx.fillStyle = "#2e7d32";
     ctx.fillText("PAGADO", valueX, y);
 
-    y += 30;
-    ctx.font = "bold 16px Arial";
+    y += 24;
+    ctx.font = "bold 14px Arial";
     ctx.fillStyle = "#263238";
     ctx.fillText("Comprobante:", labelX, y);
-    ctx.font = "14px Arial";
+    ctx.font = "12px Arial";
     ctx.fillText(comprobante, valueX, y);
 
-    y += 30;
+    // Separador
+    y += 26;
     ctx.strokeStyle = "#eceff1";
     ctx.beginPath();
-    ctx.moveTo(marginX + 25, y);
-    ctx.lineTo(marginX + ticketWidth - 25, y);
+    ctx.moveTo(marginX + 15, y);
+    ctx.lineTo(marginX + ticketWidth - 15, y);
     ctx.stroke();
 
-    y += 35;
-    ctx.font = "bold 16px Arial";
+    // Premio y valor
+    y += 26;
+    ctx.font = "bold 14px Arial";
     ctx.fillStyle = "#263238";
     ctx.fillText("Premio:", labelX, y);
-    ctx.font = "14px Arial";
+    ctx.font = "12px Arial";
     ctx.fillText("$1.000.000", valueX, y);
 
-    y += 28;
-    ctx.font = "bold 16px Arial";
+    y += 22;
+    ctx.font = "bold 14px Arial";
     ctx.fillText("Valor del número:", labelX, y);
-    ctx.font = "14px Arial";
+    ctx.font = "12px Arial";
     ctx.fillText("$20.000", valueX, y);
 
     // Mensaje final
-    y += 60;
+    y += 50;
     ctx.textAlign = "center";
-    ctx.font = "italic 15px Arial";
+    ctx.font = "italic 13px Arial";
     ctx.fillStyle = "#455a64";
     ctx.fillText("Gracias por participar, buena suerte", canvas.width / 2, y);
 
@@ -651,7 +655,7 @@ btnDescargar.onclick = () => {
         const pagado = !!info.paid;
         const estado = pagado
             ? "PAGADO"
-            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO");
+            : (enVerificacion ? "EN VERIFICACION" : "NO PAGADO";
 
         const nombre = (info.name || "").replace(/"/g, '""');
         const comp = (info.comprobante || "").replace(/"/g, '""');
