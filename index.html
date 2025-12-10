@@ -140,6 +140,78 @@
     .btn-nombre    { background: #fb8c00; color:#fff; }
     .btn-comprobante { background:#1e88e5; color:#fff; }
     .btn-recibo    { background: #8e24aa; color:#fff; }
+
+    /* Modal para selección múltiple */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 999;
+    }
+    .modal {
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 15px;
+        max-width: 420px;
+        width: 90%;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        text-align: left;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .modal h4 {
+        margin: 0 0 8px 0;
+        text-align: center;
+        color: #4a148c;
+    }
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 6px;
+        margin-bottom: 10px;
+        font-size: 13px;
+    }
+    .modal-item {
+        display: flex;
+        align-items: center;
+        padding: 3px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .modal-item:last-child {
+        border-bottom: none;
+    }
+    .modal-item label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        width: 100%;
+    }
+    .modal-item input[type="checkbox"] {
+        margin-right: 8px;
+    }
+    .modal-footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+    }
+    .modal-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+    }
+    .modal-btn-primary { background:#8e24aa; color:#fff; }
+    .modal-btn-secondary { background:#eeeeee; color:#333; }
+    .modal-btn-accent { background:#43a047; color:#fff; }
+    .modal-btn-warn { background:#e0e0e0; color:#333; }
 </style>
 </head>
 <body>
@@ -205,6 +277,22 @@
     </div>
 </div>
 
+<!-- MODAL SELECCIÓN MÚLTIPLE -->
+<div id="multiModalOverlay" class="modal-overlay">
+    <div class="modal">
+        <h4>Seleccionar números pagados</h4>
+        <div class="modal-body" id="multiList">
+            <!-- Aquí se llena la lista de números pagados con checkboxes -->
+        </div>
+        <div class="modal-footer">
+            <button id="multiSelectAll" class="modal-btn modal-btn-secondary">Seleccionar todos</button>
+            <button id="multiClear" class="modal-btn modal-btn-warn">Quitar todos</button>
+            <button id="multiGenerate" class="modal-btn modal-btn-accent">Generar recibo múltiple</button>
+            <button id="multiClose" class="modal-btn modal-btn-primary">Cerrar</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
 
@@ -252,6 +340,14 @@ const btnComprobante = document.getElementById("btnComprobante");
 const btnRecibo = document.getElementById("btnRecibo");
 const btnDescargar = document.getElementById("btnDescargar");
 const btnReciboLote = document.getElementById("btnReciboLote");
+
+// Modal elementos
+const multiModalOverlay = document.getElementById("multiModalOverlay");
+const multiList = document.getElementById("multiList");
+const multiSelectAll = document.getElementById("multiSelectAll");
+const multiClear = document.getElementById("multiClear");
+const multiGenerate = document.getElementById("multiGenerate");
+const multiClose = document.getElementById("multiClose");
 
 let numeroSeleccionado = null;
 
@@ -617,21 +713,19 @@ btnRecibo.onclick = () => {
     document.body.removeChild(link);
 };
 
-// ====================== RECIBO MÚLTIPLE POR SELECCIÓN DE NÚMEROS ======================
+// ====================== RECIBO MÚLTIPLE CON CHECKBOXES ======================
 btnReciboLote.onclick = () => {
     if (!esAdmin && !solicitarPasswordAdmin()) return;
 
-    // Traemos todos los números PAGADOS
+    // Llenar la lista con todos los números PAGADOS
+    multiList.innerHTML = "";
     const pagados = [];
+
     for (let i = 0; i < 100; i++) {
         const num = i.toString().padStart(2, "0");
         const info = estadoActual[num];
         if (info && info.paid) {
-            pagados.push({
-                num,
-                name: info.name || "",
-                comprobante: info.comprobante || "N/A"
-            });
+            pagados.push({ num, name: info.name || "" });
         }
     }
 
@@ -640,39 +734,70 @@ btnReciboLote.onclick = () => {
         return;
     }
 
-    // Mostramos listado: número - nombre
-    const listado = pagados
-        .map(p => `${p.num} - ${p.name || "Sin nombre"}`)
-        .join("\n");
+    pagados.forEach(p => {
+        const item = document.createElement("div");
+        item.className = "modal-item";
 
-    const seleccion = prompt(
-        "Números pagados disponibles:\n" + listado +
-        "\n\nEscribe los números que quieres incluir separados por comas.\n" +
-        "Ejemplo: 05, 12, 24, 55"
-    );
+        const label = document.createElement("label");
 
-    if (seleccion === null) return;
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = p.num;
+        checkbox.className = "multi-check";
 
-    const partes = (seleccion || "")
-        .split(",")
-        .map(x => x.trim())
-        .filter(x => x.length > 0);
+        const text = document.createElement("span");
+        text.textContent = `${p.num} - ${p.name || "Sin nombre"}`;
 
-    if (partes.length === 0) {
-        alert("No escribiste ningún número.");
+        label.appendChild(checkbox);
+        label.appendChild(text);
+        item.appendChild(label);
+        multiList.appendChild(item);
+    });
+
+    multiModalOverlay.style.display = "flex";
+};
+
+multiSelectAll.onclick = () => {
+    const checks = multiList.querySelectorAll(".multi-check");
+    checks.forEach(ch => ch.checked = true);
+};
+
+multiClear.onclick = () => {
+    const checks = multiList.querySelectorAll(".multi-check");
+    checks.forEach(ch => ch.checked = false);
+};
+
+multiClose.onclick = () => {
+    multiModalOverlay.style.display = "none";
+};
+
+multiGenerate.onclick = () => {
+    const checks = multiList.querySelectorAll(".multi-check:checked");
+    if (checks.length === 0) {
+        alert("Selecciona al menos un número para generar el recibo múltiple.");
         return;
     }
 
-    const setSel = new Set(partes.map(p => p.padStart(2, "0")));
-    const numerosUsados = pagados.filter(p => setSel.has(p.num));
+    const seleccionados = Array.from(checks).map(ch => ch.value);
+
+    const numerosUsados = [];
+    for (const num of seleccionados) {
+        const info = estadoActual[num];
+        if (info && info.paid) {
+            numerosUsados.push({
+                num,
+                name: info.name || "",
+                comprobante: info.comprobante || "N/A"
+            });
+        }
+    }
 
     if (numerosUsados.length === 0) {
-        alert("No coincidieron números válidos con la selección.");
+        alert("Los números seleccionados no están en estado PAGADO.");
         return;
     }
 
-    // Nombre a mostrar: si todos los números tienen el mismo nombre, se usa ese;
-    // si hay varios nombres diferentes, "Varios compradores".
+    // Nombre a mostrar: si todos tienen el mismo, lo usamos, si no "Varios compradores"
     const nombresUnicos = [...new Set(
         numerosUsados
             .map(p => (p.name || "").trim())
@@ -848,6 +973,8 @@ btnReciboLote.onclick = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
+    multiModalOverlay.style.display = "none";
 };
 
 // ====================== CSV ======================
