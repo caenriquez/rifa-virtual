@@ -6,21 +6,21 @@
 <style>
     body {
         font-family: Arial, sans-serif;
-        background: #f2f2f2;
+        background: #f3e5f5;
         text-align: center;
         padding: 20px;
     }
-    h1 { color: #333; margin-bottom: 5px; }
-    h2 { color: #555; font-size: 18px; margin-top: 5px; }
+    h1 { color: #4a148c; margin-bottom: 5px; }
+    h2 { color: #6a1b9a; font-size: 18px; margin-top: 5px; }
     .info-pago {
         margin-top: 8px;
         font-size: 14px;
-        color: #222;
+        color: #311b92;
         padding: 6px 10px;
         display: inline-block;
         border-radius: 8px;
-        background: #fff3cd;
-        border: 1px solid #ffe08a;
+        background: #ede7f6;
+        border: 1px solid #b39ddb;
     }
 
     .legend {
@@ -52,12 +52,12 @@
         border-radius: 8px;
         border: none;
         cursor: pointer;
-        background: #1976d2;
+        background: #3949ab;
         color: #fff;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     .download-btn:hover {
-        background: #0d47a1;
+        background: #283593;
     }
 
     .grid {
@@ -69,7 +69,7 @@
     }
     .num {
         background: white;
-        border: 2px solid #333;
+        border: 2px solid #4a148c;
         font-size: 22px;
         cursor: pointer;
         border-radius: 12px;
@@ -83,7 +83,7 @@
         height: 50px;
     }
     .num:hover {
-        background: #d4f0ff;
+        background: #e1bee7;
     }
 
     .reservado {
@@ -96,7 +96,7 @@
         color: #fff !important;
     }
     .pagado {
-        background: #4caf50 !important;
+        background: #66bb6a !important;
         color: white !important;
         border-color: #2e7d32 !important;
     }
@@ -109,7 +109,7 @@
         margin-right: auto;
         background: #ffffff;
         border-radius: 10px;
-        border: 1px solid #ccc;
+        border: 1px solid #ce93d8;
         box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         text-align: left;
         font-size: 14px;
@@ -117,6 +117,7 @@
     .admin-panel h3 {
         margin-top: 0;
         text-align: center;
+        color: #4a148c;
     }
     .admin-row { margin: 4px 0; }
     .admin-label { font-weight: bold; }
@@ -134,11 +135,11 @@
         cursor: pointer;
         font-size: 13px;
     }
-    .btn-liberar   { background: #f44336; color:#fff; }
-    .btn-pagado    { background: #4caf50; color:#fff; }
-    .btn-nombre    { background: #ff9800; color:#fff; }
-    .btn-comprobante { background:#2196f3; color:#fff; }
-    .btn-recibo    { background: #9c27b0; color:#fff; }
+    .btn-liberar   { background: #e53935; color:#fff; }
+    .btn-pagado    { background: #43a047; color:#fff; }
+    .btn-nombre    { background: #fb8c00; color:#fff; }
+    .btn-comprobante { background:#1e88e5; color:#fff; }
+    .btn-recibo    { background: #8e24aa; color:#fff; }
 </style>
 </head>
 <body>
@@ -165,7 +166,7 @@
         <span class="legend-color" style="background:#64b5f6;"></span> En verificación
     </span>
     <span class="legend-item">
-        <span class="legend-color" style="background:#4caf50;"></span> Pagado
+        <span class="legend-color" style="background:#66bb6a;"></span> Pagado
     </span>
 </div>
 
@@ -199,7 +200,7 @@
         <button class="admin-btn btn-pagado" id="btnPagado">Marcar / desmarcar pagado</button>
         <button class="admin-btn btn-nombre" id="btnNombre">Cambiar nombre</button>
         <button class="admin-btn btn-comprobante" id="btnComprobante">Gestionar comprobante</button>
-        <button class="admin-btn btn-recibo" id="btnRecibo">Descargar recibo</button>
+        <button class="admin-btn btn-recibo" id="btnRecibo">Recibo individual</button>
         <button class="admin-btn btn-recibo" id="btnReciboLote">Recibo múltiple (nombre)</button>
     </div>
 </div>
@@ -211,6 +212,11 @@
 // ====================== CONFIGURACIÓN ======================
 const ADMIN_PASSWORD = "1030";
 let esAdmin = false;
+const VALOR_NUMERO = 20000;   // $20.000
+
+function formatMoney(num) {
+    return "$" + num.toLocaleString("es-CO");
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyC7-pRwzbLgQGkJq1EnO9AcFHPIYKv-1WQ",
@@ -446,7 +452,7 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// ====================== RECIBO INDIVIDUAL ======================
+// ====================== RECIBO INDIVIDUAL (ALTA RESOLUCIÓN) ======================
 btnRecibo.onclick = () => {
     if (numeroSeleccionado === null) {
         alert("Primero selecciona un número en el panel.");
@@ -469,24 +475,29 @@ btnRecibo.onclick = () => {
     const comprobante = info.comprobante || "N/A";
     const fecha = new Date().toLocaleString("es-CO");
 
-    const canvas = document.createElement("canvas");
-    canvas.width = 420;
-    canvas.height = 720;
-    const ctx = canvas.getContext("2d");
+    const logicalWidth = 420;
+    const logicalHeight = 720;
+    const scale = 2; // más pixeles = más resolución
 
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, "#e3f2fd");
-    grad.addColorStop(1, "#ffffff");
+    const canvas = document.createElement("canvas");
+    canvas.width = logicalWidth * scale;
+    canvas.height = logicalHeight * scale;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+
+    const grad = ctx.createLinearGradient(0, 0, 0, logicalHeight);
+    grad.addColorStop(0, "#7e57c2");
+    grad.addColorStop(1, "#ede7f6");
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
     const marginX = 30;
     const marginY = 30;
-    const ticketWidth = canvas.width - marginX * 2;
-    const ticketHeight = canvas.height - marginY * 2;
+    const ticketWidth = logicalWidth - marginX * 2;
+    const ticketHeight = logicalHeight - marginY * 2;
 
     ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#cfd8dc";
+    ctx.strokeStyle = "#ce93d8";
     ctx.lineWidth = 2;
     const r = 16;
 
@@ -515,18 +526,18 @@ btnRecibo.onclick = () => {
         ctx.lineTo(x + toothW, topY);
     }
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "#e0e0e0";
+    ctx.strokeStyle = "#d1c4e9";
     ctx.stroke();
     ctx.restore();
 
     let y = marginY + 45;
-    ctx.fillStyle = "#263238";
+    ctx.fillStyle = "#4a148c";
     ctx.textAlign = "center";
     ctx.font = "bold 22px Arial";
-    ctx.fillText("RECIBO DE RIFA", canvas.width / 2, y);
+    ctx.fillText("RECIBO DE PAGO", logicalWidth / 2, y);
 
     y += 18;
-    ctx.strokeStyle = "#eceff1";
+    ctx.strokeStyle = "#e0e0e0";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(marginX + 15, y);
@@ -535,7 +546,7 @@ btnRecibo.onclick = () => {
 
     y += 28;
     ctx.textAlign = "left";
-    ctx.fillStyle = "#263238";
+    ctx.fillStyle = "#311b92";
     ctx.font = "bold 14px Arial";
     const labelX = marginX + 20;
     const valueX = marginX + 150;
@@ -553,7 +564,7 @@ btnRecibo.onclick = () => {
 
     y += 24;
     ctx.font = "bold 14px Arial";
-    ctx.fillStyle = "#263238";
+    ctx.fillStyle = "#311b92";
     ctx.fillText("Nombre:", labelX, y);
     ctx.font = "12px Arial";
     ctx.fillText(nombre, valueX, y);
@@ -567,13 +578,13 @@ btnRecibo.onclick = () => {
 
     y += 24;
     ctx.font = "bold 14px Arial";
-    ctx.fillStyle = "#263238";
+    ctx.fillStyle = "#311b92";
     ctx.fillText("Comprobante:", labelX, y);
     ctx.font = "12px Arial";
     ctx.fillText(comprobante, valueX, y);
 
     y += 26;
-    ctx.strokeStyle = "#eceff1";
+    ctx.strokeStyle = "#e0e0e0";
     ctx.beginPath();
     ctx.moveTo(marginX + 15, y);
     ctx.lineTo(marginX + ticketWidth - 15, y);
@@ -581,22 +592,22 @@ btnRecibo.onclick = () => {
 
     y += 26;
     ctx.font = "bold 14px Arial";
-    ctx.fillStyle = "#263238";
+    ctx.fillStyle = "#311b92";
     ctx.fillText("Premio:", labelX, y);
     ctx.font = "12px Arial";
-    ctx.fillText("$1.000.000", valueX, y);
+    ctx.fillText(formatMoney(1000000), valueX, y);
 
     y += 22;
     ctx.font = "bold 14px Arial";
     ctx.fillText("Valor del número:", labelX, y);
     ctx.font = "12px Arial";
-    ctx.fillText("$20.000", valueX, y);
+    ctx.fillText(formatMoney(VALOR_NUMERO), valueX, y);
 
     y += 50;
     ctx.textAlign = "center";
     ctx.font = "italic 13px Arial";
     ctx.fillStyle = "#455a64";
-    ctx.fillText("Gracias por participar, buena suerte", canvas.width / 2, y);
+    ctx.fillText("Gracias por participar, buena suerte", logicalWidth / 2, y);
 
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/jpeg", 0.95);
@@ -633,30 +644,54 @@ btnReciboLote.onclick = () => {
         return;
     }
 
+    const nombrePretty = formatearNombre(nombreBuscado);
+    const lista = numerosPersona.map(n => n.num).join(", ");
+    let seleccion = prompt(
+        "Números pagados para " + nombrePretty + ":\n" + lista +
+        "\n\nEscribe los números que quieres incluir separados por comas.\n" +
+        "Si dejas vacío, se incluirán TODOS."
+    );
+
+    let numerosUsados = numerosPersona;
+    if (seleccion && seleccion.trim() !== "") {
+        const partes = seleccion.split(",").map(x => x.trim());
+        const setSel = new Set(partes.map(p => p.padStart(2, "0")));
+        numerosUsados = numerosPersona.filter(n => setSel.has(n.num));
+        if (numerosUsados.length === 0) {
+            alert("No coincidieron números válidos con la selección.");
+            return;
+        }
+    }
+
+    const cantidad = numerosUsados.length;
+    const total = cantidad * VALOR_NUMERO;
     const fecha = new Date().toLocaleString("es-CO");
 
+    const logicalWidth = 420;
     const baseHeight = 420;
     const extraPorNumero = 20;
-    const canvasHeight = baseHeight + numerosPersona.length * extraPorNumero;
+    const logicalHeight = baseHeight + cantidad * extraPorNumero;
+    const scale = 2;
 
     const canvas = document.createElement("canvas");
-    canvas.width = 420;
-    canvas.height = canvasHeight;
+    canvas.width = logicalWidth * scale;
+    canvas.height = logicalHeight * scale;
     const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
 
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, "#e3f2fd");
-    grad.addColorStop(1, "#ffffff");
+    const grad = ctx.createLinearGradient(0, 0, 0, logicalHeight);
+    grad.addColorStop(0, "#7e57c2");
+    grad.addColorStop(1, "#ede7f6");
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
     const marginX = 30;
     const marginY = 30;
-    const ticketWidth = canvas.width - marginX * 2;
-    const ticketHeight = canvas.height - marginY * 2;
+    const ticketWidth = logicalWidth - marginX * 2;
+    const ticketHeight = logicalHeight - marginY * 2;
 
     ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = "#cfd8dc";
+    ctx.strokeStyle = "#ce93d8";
     ctx.lineWidth = 2;
     const r = 16;
 
@@ -685,18 +720,18 @@ btnReciboLote.onclick = () => {
         ctx.lineTo(x + toothW, topY);
     }
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "#e0e0e0";
+    ctx.strokeStyle = "#d1c4e9";
     ctx.stroke();
     ctx.restore();
 
     let y = marginY + 45;
-    ctx.fillStyle = "#263238";
+    ctx.fillStyle = "#4a148c";
     ctx.textAlign = "center";
     ctx.font = "bold 20px Arial";
-    ctx.fillText("RECIBO DE RIFA (MÚLTIPLE)", canvas.width / 2, y);
+    ctx.fillText("RECIBO DE PAGO", logicalWidth / 2, y);
 
     y += 18;
-    ctx.strokeStyle = "#eceff1";
+    ctx.strokeStyle = "#e0e0e0";
     ctx.beginPath();
     ctx.moveTo(marginX + 15, y);
     ctx.lineTo(marginX + ticketWidth - 15, y);
@@ -704,10 +739,10 @@ btnReciboLote.onclick = () => {
 
     y += 28;
     ctx.textAlign = "left";
-    ctx.fillStyle = "#263238";
+    ctx.fillStyle = "#311b92";
     ctx.font = "bold 14px Arial";
     const labelX = marginX + 20;
-    const valueX = marginX + 150;
+    const valueX = marginX + 170;
 
     ctx.fillText("Fecha:", labelX, y);
     ctx.font = "12px Arial";
@@ -717,22 +752,34 @@ btnReciboLote.onclick = () => {
     ctx.font = "bold 14px Arial";
     ctx.fillText("Nombre:", labelX, y);
     ctx.font = "12px Arial";
-    ctx.fillText(formatearNombre(nombreBuscado), valueX, y);
+    ctx.fillText(nombrePretty, valueX, y);
 
-    y += 26;
+    y += 24;
     ctx.font = "bold 14px Arial";
     ctx.fillText("Premio:", labelX, y);
     ctx.font = "12px Arial";
-    ctx.fillText("$1.000.000", valueX, y);
+    ctx.fillText(formatMoney(1000000), valueX, y);
 
     y += 22;
     ctx.font = "bold 14px Arial";
     ctx.fillText("Valor del número:", labelX, y);
     ctx.font = "12px Arial";
-    ctx.fillText("$20.000", valueX, y);
+    ctx.fillText(formatMoney(VALOR_NUMERO), valueX, y);
+
+    y += 22;
+    ctx.font = "bold 14px Arial";
+    ctx.fillText("Cantidad de números:", labelX, y);
+    ctx.font = "12px Arial";
+    ctx.fillText(String(cantidad), valueX, y);
+
+    y += 22;
+    ctx.font = "bold 14px Arial";
+    ctx.fillText("Total pagado:", labelX, y);
+    ctx.font = "12px Arial";
+    ctx.fillText(formatMoney(total), valueX, y);
 
     y += 28;
-    ctx.strokeStyle = "#eceff1";
+    ctx.strokeStyle = "#e0e0e0";
     ctx.beginPath();
     ctx.moveTo(marginX + 15, y);
     ctx.lineTo(marginX + ticketWidth - 15, y);
@@ -744,7 +791,7 @@ btnReciboLote.onclick = () => {
     y += 20;
     ctx.font = "12px Arial";
 
-    const numerosTexto = numerosPersona.map(n => n.num).join(", ");
+    const numerosTexto = numerosUsados.map(n => n.num).join(", ");
     const maxAncho = ticketWidth - 40;
     const palabras = numerosTexto.split(" ");
     let linea = "";
@@ -767,7 +814,7 @@ btnReciboLote.onclick = () => {
     ctx.textAlign = "center";
     ctx.font = "italic 13px Arial";
     ctx.fillStyle = "#455a64";
-    ctx.fillText("Gracias por participar, buena suerte", canvas.width / 2, y);
+    ctx.fillText("Gracias por participar, buena suerte", logicalWidth / 2, y);
 
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/jpeg", 0.95);
