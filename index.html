@@ -201,7 +201,7 @@
         <button class="admin-btn btn-nombre" id="btnNombre">Cambiar nombre</button>
         <button class="admin-btn btn-comprobante" id="btnComprobante">Gestionar comprobante</button>
         <button class="admin-btn btn-recibo" id="btnRecibo">Recibo individual</button>
-        <button class="admin-btn btn-recibo" id="btnReciboLote">Recibo múltiple (nombre)</button>
+        <button class="admin-btn btn-recibo" id="btnReciboLote">Recibo múltiple (selección)</button>
     </div>
 </div>
 
@@ -617,50 +617,75 @@ btnRecibo.onclick = () => {
     document.body.removeChild(link);
 };
 
-// ====================== RECIBO MÚLTIPLE POR NOMBRE ======================
+// ====================== RECIBO MÚLTIPLE POR SELECCIÓN DE NÚMEROS ======================
 btnReciboLote.onclick = () => {
     if (!esAdmin && !solicitarPasswordAdmin()) return;
 
-    let nombreBuscado = prompt("Nombre exacto de la persona para generar recibo múltiple:");
-    if (!nombreBuscado) return;
-    nombreBuscado = nombreBuscado.trim().toLowerCase();
-
-    const numerosPersona = [];
+    // Traemos todos los números PAGADOS
+    const pagados = [];
     for (let i = 0; i < 100; i++) {
         const num = i.toString().padStart(2, "0");
         const info = estadoActual[num];
-        if (!info) continue;
-
-        if ((info.name || "").trim().toLowerCase() === nombreBuscado && info.paid) {
-            numerosPersona.push({
+        if (info && info.paid) {
+            pagados.push({
                 num,
+                name: info.name || "",
                 comprobante: info.comprobante || "N/A"
             });
         }
     }
 
-    if (numerosPersona.length === 0) {
-        alert("No se encontraron números en estado PAGADO para ese nombre.");
+    if (pagados.length === 0) {
+        alert("No hay números en estado PAGADO para generar recibo múltiple.");
         return;
     }
 
-    const nombrePretty = formatearNombre(nombreBuscado);
-    const lista = numerosPersona.map(n => n.num).join(", ");
-    let seleccion = prompt(
-        "Números pagados para " + nombrePretty + ":\n" + lista +
+    // Mostramos listado: número - nombre
+    const listado = pagados
+        .map(p => `${p.num} - ${p.name || "Sin nombre"}`)
+        .join("\n");
+
+    const seleccion = prompt(
+        "Números pagados disponibles:\n" + listado +
         "\n\nEscribe los números que quieres incluir separados por comas.\n" +
-        "Si dejas vacío, se incluirán TODOS."
+        "Ejemplo: 05, 12, 24, 55"
     );
 
-    let numerosUsados = numerosPersona;
-    if (seleccion && seleccion.trim() !== "") {
-        const partes = seleccion.split(",").map(x => x.trim());
-        const setSel = new Set(partes.map(p => p.padStart(2, "0")));
-        numerosUsados = numerosPersona.filter(n => setSel.has(n.num));
-        if (numerosUsados.length === 0) {
-            alert("No coincidieron números válidos con la selección.");
-            return;
-        }
+    if (seleccion === null) return;
+
+    const partes = (seleccion || "")
+        .split(",")
+        .map(x => x.trim())
+        .filter(x => x.length > 0);
+
+    if (partes.length === 0) {
+        alert("No escribiste ningún número.");
+        return;
+    }
+
+    const setSel = new Set(partes.map(p => p.padStart(2, "0")));
+    const numerosUsados = pagados.filter(p => setSel.has(p.num));
+
+    if (numerosUsados.length === 0) {
+        alert("No coincidieron números válidos con la selección.");
+        return;
+    }
+
+    // Nombre a mostrar: si todos los números tienen el mismo nombre, se usa ese;
+    // si hay varios nombres diferentes, "Varios compradores".
+    const nombresUnicos = [...new Set(
+        numerosUsados
+            .map(p => (p.name || "").trim())
+            .filter(Boolean)
+    )];
+
+    let nombrePretty;
+    if (nombresUnicos.length === 1) {
+        nombrePretty = nombresUnicos[0];
+    } else if (nombresUnicos.length === 0) {
+        nombrePretty = "(Sin nombre)";
+    } else {
+        nombrePretty = "Varios compradores";
     }
 
     const cantidad = numerosUsados.length;
@@ -817,17 +842,13 @@ btnReciboLote.onclick = () => {
     ctx.fillText("Gracias por participar, buena suerte", logicalWidth / 2, y);
 
     const link = document.createElement("a");
+    const safeName = nombrePretty.replace(/[^a-zA-Z0-9]+/g, "_") || "varios";
     link.href = canvas.toDataURL("image/jpeg", 0.95);
-    link.download = "recibo_rifa_multiple_" + nombreBuscado.replace(/\s+/g, "_") + ".jpg";
+    link.download = "recibo_rifa_multiple_" + safeName + ".jpg";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 };
-
-function formatearNombre(nombreMin) {
-    if (!nombreMin) return "";
-    return nombreMin.split(" ").map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
-}
 
 // ====================== CSV ======================
 btnDescargar.onclick = () => {
