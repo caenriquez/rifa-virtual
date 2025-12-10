@@ -200,6 +200,7 @@
         <button class="admin-btn btn-nombre" id="btnNombre">Cambiar nombre</button>
         <button class="admin-btn btn-comprobante" id="btnComprobante">Gestionar comprobante</button>
         <button class="admin-btn btn-recibo" id="btnRecibo">Descargar recibo</button>
+        <button class="admin-btn btn-recibo" id="btnReciboLote">Recibo múltiple (nombre)</button>
     </div>
 </div>
 
@@ -244,6 +245,7 @@ const btnNombre = document.getElementById("btnNombre");
 const btnComprobante = document.getElementById("btnComprobante");
 const btnRecibo = document.getElementById("btnRecibo");
 const btnDescargar = document.getElementById("btnDescargar");
+const btnReciboLote = document.getElementById("btnReciboLote");
 
 let numeroSeleccionado = null;
 
@@ -444,7 +446,7 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// ====================== RECIBO JPG TIPO TIQUETE ======================
+// ====================== RECIBO INDIVIDUAL ======================
 btnRecibo.onclick = () => {
     if (numeroSeleccionado === null) {
         alert("Primero selecciona un número en el panel.");
@@ -603,6 +605,182 @@ btnRecibo.onclick = () => {
     link.click();
     document.body.removeChild(link);
 };
+
+// ====================== RECIBO MÚLTIPLE POR NOMBRE ======================
+btnReciboLote.onclick = () => {
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
+
+    let nombreBuscado = prompt("Nombre exacto de la persona para generar recibo múltiple:");
+    if (!nombreBuscado) return;
+    nombreBuscado = nombreBuscado.trim().toLowerCase();
+
+    const numerosPersona = [];
+    for (let i = 0; i < 100; i++) {
+        const num = i.toString().padStart(2, "0");
+        const info = estadoActual[num];
+        if (!info) continue;
+
+        if ((info.name || "").trim().toLowerCase() === nombreBuscado && info.paid) {
+            numerosPersona.push({
+                num,
+                comprobante: info.comprobante || "N/A"
+            });
+        }
+    }
+
+    if (numerosPersona.length === 0) {
+        alert("No se encontraron números en estado PAGADO para ese nombre.");
+        return;
+    }
+
+    const fecha = new Date().toLocaleString("es-CO");
+
+    const baseHeight = 420;
+    const extraPorNumero = 20;
+    const canvasHeight = baseHeight + numerosPersona.length * extraPorNumero;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 420;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
+
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#e3f2fd");
+    grad.addColorStop(1, "#ffffff");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const marginX = 30;
+    const marginY = 30;
+    const ticketWidth = canvas.width - marginX * 2;
+    const ticketHeight = canvas.height - marginY * 2;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#cfd8dc";
+    ctx.lineWidth = 2;
+    const r = 16;
+
+    ctx.beginPath();
+    ctx.moveTo(marginX + r, marginY);
+    ctx.lineTo(marginX + ticketWidth - r, marginY);
+    ctx.quadraticCurveTo(marginX + ticketWidth, marginY, marginX + ticketWidth, marginY + r);
+    ctx.lineTo(marginX + ticketWidth, marginY + ticketHeight - r);
+    ctx.quadraticCurveTo(marginX + ticketWidth, marginY + ticketHeight, marginX + ticketWidth - r, marginY + ticketHeight);
+    ctx.lineTo(marginX + r, marginY + ticketHeight);
+    ctx.quadraticCurveTo(marginX, marginY + ticketHeight, marginX, marginY + ticketHeight - r);
+    ctx.lineTo(marginX, marginY + r);
+    ctx.quadraticCurveTo(marginX, marginY, marginX + r, marginY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath();
+    const topY = marginY;
+    const toothW = 14;
+    const toothH = 8;
+    for (let x = marginX; x < marginX + ticketWidth; x += toothW) {
+        ctx.moveTo(x, topY);
+        ctx.lineTo(x + toothW / 2, topY - toothH);
+        ctx.lineTo(x + toothW, topY);
+    }
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#e0e0e0";
+    ctx.stroke();
+    ctx.restore();
+
+    let y = marginY + 45;
+    ctx.fillStyle = "#263238";
+    ctx.textAlign = "center";
+    ctx.font = "bold 20px Arial";
+    ctx.fillText("RECIBO DE RIFA (MÚLTIPLE)", canvas.width / 2, y);
+
+    y += 18;
+    ctx.strokeStyle = "#eceff1";
+    ctx.beginPath();
+    ctx.moveTo(marginX + 15, y);
+    ctx.lineTo(marginX + ticketWidth - 15, y);
+    ctx.stroke();
+
+    y += 28;
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#263238";
+    ctx.font = "bold 14px Arial";
+    const labelX = marginX + 20;
+    const valueX = marginX + 150;
+
+    ctx.fillText("Fecha:", labelX, y);
+    ctx.font = "12px Arial";
+    ctx.fillText(fecha, valueX, y);
+
+    y += 24;
+    ctx.font = "bold 14px Arial";
+    ctx.fillText("Nombre:", labelX, y);
+    ctx.font = "12px Arial";
+    ctx.fillText(formatearNombre(nombreBuscado), valueX, y);
+
+    y += 26;
+    ctx.font = "bold 14px Arial";
+    ctx.fillText("Premio:", labelX, y);
+    ctx.font = "12px Arial";
+    ctx.fillText("$1.000.000", valueX, y);
+
+    y += 22;
+    ctx.font = "bold 14px Arial";
+    ctx.fillText("Valor del número:", labelX, y);
+    ctx.font = "12px Arial";
+    ctx.fillText("$20.000", valueX, y);
+
+    y += 28;
+    ctx.strokeStyle = "#eceff1";
+    ctx.beginPath();
+    ctx.moveTo(marginX + 15, y);
+    ctx.lineTo(marginX + ticketWidth - 15, y);
+    ctx.stroke();
+
+    y += 22;
+    ctx.font = "bold 14px Arial";
+    ctx.fillText("Números pagados:", labelX, y);
+    y += 20;
+    ctx.font = "12px Arial";
+
+    const numerosTexto = numerosPersona.map(n => n.num).join(", ");
+    const maxAncho = ticketWidth - 40;
+    const palabras = numerosTexto.split(" ");
+    let linea = "";
+    for (let i = 0; i < palabras.length; i++) {
+        const testLinea = linea + palabras[i] + " ";
+        const anchoTest = ctx.measureText(testLinea).width;
+        if (anchoTest > maxAncho) {
+            ctx.fillText(linea, labelX, y);
+            linea = palabras[i] + " ";
+            y += 18;
+        } else {
+            linea = testLinea;
+        }
+    }
+    if (linea) {
+        ctx.fillText(linea, labelX, y);
+    }
+
+    y += 40;
+    ctx.textAlign = "center";
+    ctx.font = "italic 13px Arial";
+    ctx.fillStyle = "#455a64";
+    ctx.fillText("Gracias por participar, buena suerte", canvas.width / 2, y);
+
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/jpeg", 0.95);
+    link.download = "recibo_rifa_multiple_" + nombreBuscado.replace(/\s+/g, "_") + ".jpg";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+function formatearNombre(nombreMin) {
+    if (!nombreMin) return "";
+    return nombreMin.split(" ").map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+}
 
 // ====================== CSV ======================
 btnDescargar.onclick = () => {
