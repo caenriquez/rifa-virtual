@@ -23,6 +23,68 @@
         border: 1px solid #b39ddb;
     }
 
+    /* CONTADOR */
+    .countdown {
+        margin-top: 18px;
+        margin-bottom: 12px;
+    }
+    .countdown-title {
+        font-size: 14px;
+        color: #4a148c;
+        margin-bottom: 6px;
+    }
+    .countdown-boxes {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 4px;
+    }
+    .time-box {
+        background: #4527a0;
+        color: #fff;
+        padding: 8px 10px;
+        border-radius: 10px;
+        min-width: 70px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .time-box span {
+        display: block;
+        font-size: 22px;
+        font-weight: bold;
+    }
+    .time-box small {
+        display: block;
+        font-size: 11px;
+        margin-top: 2px;
+    }
+    .countdown-note {
+        font-size: 12px;
+        color: #311b92;
+    }
+
+    /* PANEL RESULTADOS LOTERÍA */
+    .result-panel {
+        margin-top: 16px;
+        margin-bottom: 10px;
+        padding: 10px;
+        display: inline-block;
+        text-align: left;
+        background: #fffde7;
+        border-radius: 10px;
+        border: 1px solid #ffe082;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        font-size: 14px;
+    }
+    .result-panel strong {
+        color: #bf360c;
+    }
+    .result-number {
+        font-size: 20px;
+        font-weight: bold;
+        color: #d84315;
+        margin-left: 4px;
+    }
+
     .legend {
         margin: 18px 0 8px 0;
         font-size: 14px;
@@ -100,6 +162,10 @@
         color: white !important;
         border-color: #2e7d32 !important;
     }
+    .ganador {
+        box-shadow: 0 0 0 3px #ff5252;
+        border-color: #ff1744 !important;
+    }
 
     .admin-panel {
         margin-top: 25px;
@@ -140,8 +206,9 @@
     .btn-nombre    { background: #fb8c00; color:#fff; }
     .btn-comprobante { background:#1e88e5; color:#fff; }
     .btn-recibo    { background: #8e24aa; color:#fff; }
+    .btn-resultado { background: #d84315; color:#fff; }
 
-    /* Modal para selección múltiple */
+    /* Modal selección múltiple */
     .modal-overlay {
         position: fixed;
         inset: 0;
@@ -222,7 +289,45 @@
     Se puede pagar por transferencia a Nequi: <strong>3116403643</strong>
 </div>
 
-<p style="margin-top:18px;">
+<!-- CONTADOR REGRESIVO -->
+<div class="countdown">
+    <div class="countdown-title">Faltan para el sorteo:</div>
+    <div class="countdown-boxes">
+        <div class="time-box">
+            <span id="cdDays">0</span>
+            <small>Días</small>
+        </div>
+        <div class="time-box">
+            <span id="cdHours">0</span>
+            <small>Horas</small>
+        </div>
+        <div class="time-box">
+            <span id="cdMinutes">0</span>
+            <small>Minutos</small>
+        </div>
+        <div class="time-box">
+            <span id="cdSeconds">0</span>
+            <small>Segundos</small>
+        </div>
+    </div>
+    <div class="countdown-note">
+        Sorteo: sábado 20 de diciembre de 2025 – 10:30 p.m. (Lotería de Boyacá)
+    </div>
+</div>
+
+<!-- RESULTADO LOTERÍA -->
+<div class="result-panel">
+    <div>
+        <strong>Lotería de Boyacá – Número oficial:</strong>
+        <span id="lotFullResult" class="result-number">----</span>
+    </div>
+    <div>
+        <strong>Número ganador de la rifa (2 últimas cifras):</strong>
+        <span id="lotLastTwo" class="result-number">--</span>
+    </div>
+</div>
+
+<p style="margin-top:10px;">
     Solo el administrador puede registrar y gestionar los números.<br>
     Al seleccionar un número se pedirá la contraseña.
 </p>
@@ -267,6 +372,10 @@
     <div class="admin-row">
         <span class="admin-label">Comprobante:</span> <span id="panelComprobante"></span>
     </div>
+    <div class="admin-row">
+        <span class="admin-label">Resultado Boyacá (actual):</span>
+        <span id="panelResultado">No registrado</span>
+    </div>
     <div class="admin-buttons">
         <button class="admin-btn btn-liberar" id="btnLiberar">Liberar número</button>
         <button class="admin-btn btn-pagado" id="btnPagado">Marcar / desmarcar pagado</button>
@@ -274,6 +383,7 @@
         <button class="admin-btn btn-comprobante" id="btnComprobante">Gestionar comprobante</button>
         <button class="admin-btn btn-recibo" id="btnRecibo">Recibo individual</button>
         <button class="admin-btn btn-recibo" id="btnReciboLote">Recibo múltiple (selección)</button>
+        <button class="admin-btn btn-resultado" id="btnResultado">Registrar resultado Boyacá</button>
     </div>
 </div>
 
@@ -332,6 +442,7 @@ const panelNum = document.getElementById("panelNum");
 const panelNombre = document.getElementById("panelNombre");
 const panelEstado = document.getElementById("panelEstado");
 const panelComprobante = document.getElementById("panelComprobante");
+const panelResultado = document.getElementById("panelResultado");
 
 const btnLiberar = document.getElementById("btnLiberar");
 const btnPagado = document.getElementById("btnPagado");
@@ -340,6 +451,7 @@ const btnComprobante = document.getElementById("btnComprobante");
 const btnRecibo = document.getElementById("btnRecibo");
 const btnDescargar = document.getElementById("btnDescargar");
 const btnReciboLote = document.getElementById("btnReciboLote");
+const btnResultado = document.getElementById("btnResultado");
 
 // Modal elementos
 const multiModalOverlay = document.getElementById("multiModalOverlay");
@@ -349,7 +461,50 @@ const multiClear = document.getElementById("multiClear");
 const multiGenerate = document.getElementById("multiGenerate");
 const multiClose = document.getElementById("multiClose");
 
+// Resultado en pantalla
+const lotFullResultSpan = document.getElementById("lotFullResult");
+const lotLastTwoSpan = document.getElementById("lotLastTwo");
+
+// Countdown elementos
+const cdDays = document.getElementById("cdDays");
+const cdHours = document.getElementById("cdHours");
+const cdMinutes = document.getElementById("cdMinutes");
+const cdSeconds = document.getElementById("cdSeconds");
+
+// Referencias Firebase
+const numerosRef = db.ref("numeros");
+const resultadoRef = db.ref("resultado");
+
 let numeroSeleccionado = null;
+let numeroGanadorActual = null;
+
+// ====================== CONTADOR REGRESIVO ======================
+const targetDate = new Date(2025, 11, 20, 22, 30, 0); // 20 dic 2025 22:30
+
+function updateCountdown() {
+    const now = new Date().getTime();
+    const distance = targetDate.getTime() - now;
+
+    if (distance <= 0) {
+        cdDays.textContent = "0";
+        cdHours.textContent = "0";
+        cdMinutes.textContent = "0";
+        cdSeconds.textContent = "0";
+        return;
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((distance / (1000 * 60)) % 60);
+    const seconds = Math.floor((distance / 1000) % 60);
+
+    cdDays.textContent = days;
+    cdHours.textContent = hours.toString().padStart(2, "0");
+    cdMinutes.textContent = minutes.toString().padStart(2, "0");
+    cdSeconds.textContent = seconds.toString().padStart(2, "0");
+}
+updateCountdown();
+setInterval(updateCountdown, 1000);
 
 // ====================== CREAR GRID 00–99 ======================
 for (let i = 0; i < 100; i++) {
@@ -362,9 +517,7 @@ for (let i = 0; i < 100; i++) {
     grid.appendChild(div);
 }
 
-// ====================== SINCRONIZAR CON FIREBASE ======================
-const numerosRef = db.ref("numeros");
-
+// ====================== SINCRONIZAR NÚMEROS CON FIREBASE ======================
 numerosRef.on("value", (snapshot) => {
     const data = snapshot.val() || {};
 
@@ -378,7 +531,7 @@ numerosRef.on("value", (snapshot) => {
     for (let i = 0; i < 100; i++) {
         let n = i.toString().padStart(2, "0");
         let div = numDivs[n];
-        div.classList.remove("reservado", "verificacion", "pagado");
+        div.classList.remove("reservado", "verificacion", "pagado", "ganador");
         div.title = "";
     }
 
@@ -387,8 +540,6 @@ numerosRef.on("value", (snapshot) => {
         const info = data[num];
         const div = numDivs[num];
         if (!div) return;
-
-        div.classList.remove("reservado", "verificacion", "pagado");
 
         const enVerificacion = !!info.enVerificacion;
         const pagado = !!info.paid;
@@ -411,7 +562,45 @@ numerosRef.on("value", (snapshot) => {
         div.title = `#${num} - ${info.name} - ${estadoTexto}${extra}`;
     });
 
+    // Reaplicar destaque del ganador si existe
+    if (numeroGanadorActual !== null && numDivs[numeroGanadorActual]) {
+        numDivs[numeroGanadorActual].classList.add("ganador");
+    }
+
     if (numeroSeleccionado !== null) actualizarPanel(numeroSeleccionado);
+});
+
+// ====================== SINCRONIZAR RESULTADO LOTERÍA ======================
+resultadoRef.on("value", (snapshot) => {
+    const data = snapshot.val();
+    if (data && data.numero) {
+        const full = data.numero;
+        const lastTwo = (data.ultimasDos || full.slice(-2)).padStart(2, "0");
+
+        lotFullResultSpan.textContent = full;
+        lotLastTwoSpan.textContent = lastTwo;
+
+        panelResultado.textContent = `${full} (rifa: ${lastTwo})`;
+
+        // Quitar ganador anterior
+        if (numeroGanadorActual !== null && numDivs[numeroGanadorActual]) {
+            numDivs[numeroGanadorActual].classList.remove("ganador");
+        }
+
+        numeroGanadorActual = lastTwo;
+        if (numDivs[lastTwo]) {
+            numDivs[lastTwo].classList.add("ganador");
+        }
+    } else {
+        lotFullResultSpan.textContent = "----";
+        lotLastTwoSpan.textContent = "--";
+        panelResultado.textContent = "No registrado";
+
+        if (numeroGanadorActual !== null && numDivs[numeroGanadorActual]) {
+            numDivs[numeroGanadorActual].classList.remove("ganador");
+        }
+        numeroGanadorActual = null;
+    }
 });
 
 // ====================== LÓGICA ADMIN ======================
@@ -548,6 +737,29 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
+// ====================== REGISTRAR RESULTADO BOYACÁ (ADMIN) ======================
+btnResultado.onclick = () => {
+    if (!esAdmin && !solicitarPasswordAdmin()) return;
+
+    let num = prompt("Ingresa el número ganador de la Lotería de Boyacá (ej: 1234 o 56789):");
+    if (num === null) return;
+
+    num = num.replace(/\D/g, "");
+    if (num.length < 2) {
+        alert("Debes ingresar al menos 2 dígitos.");
+        return;
+    }
+
+    const ultimasDos = num.slice(-2);
+
+    resultadoRef.set({
+        numero: num,
+        ultimasDos: ultimasDos,
+        fecha: new Date().toISOString()
+    });
+    alert("Resultado registrado. Se actualizará en todos los dispositivos.");
+};
+
 // ====================== RECIBO INDIVIDUAL (ALTA RESOLUCIÓN) ======================
 btnRecibo.onclick = () => {
     if (numeroSeleccionado === null) {
@@ -573,7 +785,7 @@ btnRecibo.onclick = () => {
 
     const logicalWidth = 420;
     const logicalHeight = 720;
-    const scale = 2; // más pixeles = más resolución
+    const scale = 2;
 
     const canvas = document.createElement("canvas");
     canvas.width = logicalWidth * scale;
@@ -717,7 +929,6 @@ btnRecibo.onclick = () => {
 btnReciboLote.onclick = () => {
     if (!esAdmin && !solicitarPasswordAdmin()) return;
 
-    // Llenar la lista con todos los números PAGADOS
     multiList.innerHTML = "";
     const pagados = [];
 
@@ -797,7 +1008,6 @@ multiGenerate.onclick = () => {
         return;
     }
 
-    // Nombre a mostrar: si todos tienen el mismo, lo usamos, si no "Varios compradores"
     const nombresUnicos = [...new Set(
         numerosUsados
             .map(p => (p.name || "").trim())
