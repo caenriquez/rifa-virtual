@@ -737,13 +737,27 @@ btnComprobante.onclick = () => {
     actualizarPanel(numeroSeleccionado);
 };
 
-// ====================== REGISTRAR RESULTADO BOYACÁ (ADMIN) ======================
+// ====================== REGISTRAR / BORRAR RESULTADO BOYACÁ ======================
 btnResultado.onclick = () => {
     if (!esAdmin && !solicitarPasswordAdmin()) return;
 
-    let num = prompt("Ingresa el número ganador de la Lotería de Boyacá (ej: 1234 o 56789):");
+    let num = prompt(
+        "Ingresa el número ganador de la Lotería de Boyacá (ej: 1234 o 56789).\n\n" +
+        "Si quieres BORRAR el resultado actual, deja vacío y presiona Aceptar."
+    );
+
     if (num === null) return;
 
+    // Si deja vacío → borrar resultado
+    if (num.trim() === "") {
+        if (confirm("¿Deseas borrar el resultado actual de la Lotería de Boyacá?")) {
+            resultadoRef.remove();
+            alert("Resultado borrado. Se actualizará en todos los dispositivos.");
+        }
+        return;
+    }
+
+    // Registrar nuevo resultado
     num = num.replace(/\D/g, "");
     if (num.length < 2) {
         alert("Debes ingresar al menos 2 dígitos.");
